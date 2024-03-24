@@ -1,11 +1,9 @@
 #include <iostream>
 
-#include "karma/allocator.h"
-
-using namespace karma;
+#include "karma.h"
 
 int main() {
-    Allocator karma(4, 0.5, 100);
+    KarmaAllocator karma(4, 0.5, 100);
 
     karma.add_user(1);
     karma.add_user(2);

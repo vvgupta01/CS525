@@ -7,13 +7,6 @@
 
 typedef std::pair<uint32_t, uint32_t> bheap_item;
 
-struct bheap_cmp {
-    bool operator()(const bheap_item& a, const bheap_item& b) {
-        return a.second > b.second;
-    }
-};
-
-namespace karma {
 class BroadcastHeap {
    public:
     BroadcastHeap();
@@ -22,16 +15,21 @@ class BroadcastHeap {
 
     bheap_item pop();
 
-    size_t size();
-
-    bool empty();
-
     uint32_t min();
 
     void add_all(int32_t val);
 
+    size_t size();
+
+    bool empty();
+
    private:
+    struct bheap_cmp {
+        bool operator()(const bheap_item& a, const bheap_item& b) {
+            return a.second > b.second;
+        }
+    };
+
     std::priority_queue<bheap_item, std::vector<bheap_item>, bheap_cmp> h_;
     int32_t base_val_;
 };
-}  // namespace karma

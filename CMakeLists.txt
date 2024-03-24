@@ -8,12 +8,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(CTest)
 enable_testing()
 
-add_library(karma src/karma/allocator.cpp src/karma/bheap.cpp)
-target_include_directories(karma PUBLIC include)
+add_library(alloc src/karma.cpp src/static.cpp src/maxmin.cpp src/bheap.cpp)
+target_include_directories(alloc PUBLIC include)
 
 add_executable(main src/main.cpp)
 target_include_directories(main PUBLIC include)
-target_link_libraries(main PRIVATE karma)
+target_link_libraries(main PRIVATE alloc)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

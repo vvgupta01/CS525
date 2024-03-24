@@ -1,8 +1,5 @@
 #include "bheap.h"
 
-#include "karma/allocator.h"
-
-namespace karma {
 BroadcastHeap::BroadcastHeap() {
     base_val_ = 0;
 }
@@ -18,14 +15,6 @@ bheap_item BroadcastHeap::pop() {
     return std::make_pair(i.first, i.second + base_val_);
 }
 
-size_t BroadcastHeap::size() {
-    return h_.size();
-}
-
-bool BroadcastHeap::empty() {
-    return size() == 0;
-}
-
 uint32_t BroadcastHeap::min() {
     return h_.top().second + base_val_;
 }
@@ -33,4 +22,11 @@ uint32_t BroadcastHeap::min() {
 void BroadcastHeap::add_all(int32_t delta) {
     base_val_ += delta;
 }
-}  // namespace karma
+
+size_t BroadcastHeap::size() {
+    return h_.size();
+}
+
+bool BroadcastHeap::empty() {
+    return size() == 0;
+}
