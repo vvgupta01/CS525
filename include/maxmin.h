@@ -20,6 +20,8 @@ class MaxMinAllocator : public Allocator {
 
     uint32_t get_num_tenants();
 
+    void output_tenant(std::ostream& s, uint32_t id);
+
    private:
     struct Tenant {
         uint32_t demand_ = 0, allocation_ = 0;

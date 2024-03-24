@@ -59,3 +59,8 @@ void MaxMinAllocator::set_demand(uint32_t id, uint32_t demand) {
 uint32_t MaxMinAllocator::get_num_tenants() {
     return tenants_.size();
 }
+
+void MaxMinAllocator::output_tenant(std::ostream& s, uint32_t id) {
+    auto t = tenants_[id];
+    s << "ID: " << id << " - alloc=" << t.allocation_ << "/" << t.demand_ << std::endl;
+}

@@ -5,83 +5,57 @@
 
 #include "bheap.h"
 
-void KarmaAllocator::print_user(uint32_t id) {
-    auto u = users_[id];
-    std::cout << "ID: " << u->id_ << " - alloc=" << u->allocation_ << "/" << u->demand_
-              << ", credits=" << u->credits_ << " (delta=" << u->rate_ << ")" << std::endl;
-}
-
 KarmaAllocator::KarmaAllocator(uint32_t num_blocks, float alpha, uint32_t init_credits) : Allocator(num_blocks) {
     if (alpha < 0 || alpha > 1) {
         throw std::invalid_argument("alpha must be between 0 and 1");
     }
 
-    public_blocks_ = (uint32_t)(alpha * total_blocks_);
+    public_blocks_ = alpha * total_blocks_;
     init_credits_ = init_credits;
 
-    users_[PUBLIC_ID] = new User(PUBLIC_ID, 0);
-}
-
-KarmaAllocator::~KarmaAllocator() {
-    for (auto [_, u] : users_) {
-        delete u;
-    }
+    tenants_.emplace(PUBLIC_ID, 0);
 }
 
 void KarmaAllocator::add_user(uint32_t id) {
-    if (users_.count(id)) {
-        throw std::runtime_error("user already exists");
-    }
-
-    uint32_t credits = init_credits_;
-
-    if (get_num_tenants() > 0) {
-        uint64_t sum_credits = 0;
-        for (const auto& [_, u] : users_) {
-            sum_credits += u->credits_;
-        }
-        credits = sum_credits / get_num_tenants();
-    }
-    users_[id] = new User(id, credits);
+    uint32_t credits = get_num_tenants() > 0 ? total_credits_ / get_num_tenants() : init_credits_;
+    tenants_.emplace(id, credits);
+    total_credits_ += credits;
 }
 
 void KarmaAllocator::remove_user(uint32_t id) {
     if (id != PUBLIC_ID) {
-        delete users_[id];
-        users_.erase(id);
+        total_credits_ -= tenants_[id].credits_;
+        tenants_.erase(id);
     }
 }
 
 void KarmaAllocator::allocate() {
     fair_share_ = (total_blocks_ - public_blocks_) / get_num_tenants();
 
-    std::vector<User*> donors, borrowers;
+    std::vector<uint32_t> donors, borrowers;
     uint32_t supply = public_blocks_, demand = 0;
 
-    for (auto& [id, u] : users_) {
-        u->rate_ = 0;
-        u->credits_ += public_blocks_ / get_num_tenants();
+    for (auto& [id, t] : tenants_) {
+        t.rate_ = 0;
         if (id == PUBLIC_ID) {
+            t.credits_ = init_credits_ * get_num_tenants();
             continue;
         }
+        t.credits_ += public_blocks_ / get_num_tenants();
 
-        if (u->demand_ < fair_share_) {
-            donors.push_back(u);
-            supply += fair_share_ - u->demand_;
-        } else if (u->demand_ > fair_share_) {
-            borrowers.push_back(u);
-            demand += std::min(u->demand_ - fair_share_, u->credits_);
+        if (t.demand_ < fair_share_) {
+            donors.push_back(id);
+            supply += fair_share_ - t.demand_;
+        } else if (t.demand_ > fair_share_) {
+            borrowers.push_back(id);
+            demand += std::min(t.demand_ - fair_share_, t.credits_);
         }
-        u->allocation_ = std::min(u->demand_, fair_share_);
+        t.allocation_ = std::min(t.demand_, fair_share_);
     }
 
     if (public_blocks_ > 0) {
-        users_[PUBLIC_ID]->credits_ = users_.size() * init_credits_ + 1;
-        donors.push_back(users_[PUBLIC_ID]);
+        donors.push_back(PUBLIC_ID);
     }
-
-    std::cout << "fair share: " << fair_share_ << ", public blocks: " << public_blocks_ << std::endl;
-    std::cout << "supply: " << supply << ", demand: " << demand << std::endl;
 
     if (supply >= demand) {
         borrow_from_poor(demand, donors, borrowers);
@@ -89,43 +63,50 @@ void KarmaAllocator::allocate() {
         donate_to_rich(supply, donors, borrowers);
     }
 
-    for (auto& [_, u] : users_) {
-        u->credits_ += u->rate_;
+    total_credits_ = 0;
+    for (auto& [id, t] : tenants_) {
+        if (id == PUBLIC_ID) {
+            t.credits_ = 0;
+        } else {
+            t.credits_ += t.rate_;
+            total_credits_ += t.credits_;
+        }
     }
 }
 
 void KarmaAllocator::set_demand(uint32_t id, uint32_t demand) {
-    users_[id]->demand_ = demand;
+    tenants_[id].demand_ = demand;
 }
 
 uint32_t KarmaAllocator::get_num_tenants() {
-    return users_.size() - 1;
+    return tenants_.size() - 1;
 }
 
 uint32_t KarmaAllocator::get_block_surplus(uint32_t id) {
     if (id == PUBLIC_ID) {
         return public_blocks_;
     }
-    return fair_share_ - users_[id]->demand_;
+    return fair_share_ - tenants_[id].demand_;
 }
 
-void KarmaAllocator::borrow_from_poor(uint32_t demand, std::vector<User*>& donors, std::vector<User*>& borrowers) {
-    for (const auto& b : borrowers) {
-        uint32_t to_borrow = std::min(b->credits_, b->demand_ - fair_share_);
-        b->allocation_ += to_borrow;
-        b->rate_ -= to_borrow;
+void KarmaAllocator::borrow_from_poor(uint32_t demand, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers) {
+    for (uint32_t id : borrowers) {
+        uint32_t to_borrow = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_);
+        tenants_[id].allocation_ += to_borrow;
+        tenants_[id].rate_ -= to_borrow;
     }
 
-    for (const auto& d : donors) {
-        d->blocks_ = get_block_surplus(d->id_);
+    std::vector<Candidate> donor_c;
+    for (uint32_t id : donors) {
+        Candidate c(id, tenants_[id].credits_, get_block_surplus(id));
+        donor_c.push_back(c);
     }
-    std::sort(donors.begin(), donors.end(), [](const KarmaAllocator::User* a, const KarmaAllocator::User* b) {
-        return a->credits_ < b->credits_;
+    std::sort(donor_c.begin(), donor_c.end(), [](const Candidate& a, const Candidate& b) {
+        return a.credits_ < b.credits_;
     });
-    auto temp_u = new User(-1, -1);
-    donors.push_back(temp_u);
+    donor_c.push_back(Candidate(-1, std::numeric_limits<uint32_t>::max(), 0));
 
-    int32_t curr_c = -1, next_c = donors[0]->credits_;
+    int64_t curr_c = -1, next_c = donor_c[0].credits_;
 
     size_t idx = 0;
     auto poorest_donors = BroadcastHeap();
@@ -135,55 +116,56 @@ void KarmaAllocator::borrow_from_poor(uint32_t demand, std::vector<User*>& donor
             curr_c = next_c;
         }
 
-        while (donors[idx]->credits_ == curr_c) {
-            poorest_donors.push(donors[idx]->id_, donors[idx]->blocks_);
+        while (donor_c[idx].credits_ == curr_c) {
+            poorest_donors.push(donor_c[idx].id_, donor_c[idx].blocks_);
             idx++;
         }
-        next_c = donors[idx]->credits_;
+        next_c = donor_c[idx].credits_;
 
         if (demand < poorest_donors.size()) {
             for (uint32_t i = 0; i < demand; ++i) {
-                bheap_item item = poorest_donors.pop();
-                users_[item.first]->rate_ += get_block_surplus(item.first) - item.second + 1;
+                auto [id, v] = poorest_donors.pop();
+                tenants_[id].rate_ += get_block_surplus(id) - v + 1;
             }
             demand = 0;
         } else {
-            uint32_t alpha = std::min({poorest_donors.min(), (uint32_t)(demand / poorest_donors.size()), (uint32_t)next_c - curr_c});
+            uint32_t alpha = std::min({poorest_donors.min(), demand / (uint32_t)poorest_donors.size(),
+                                       (uint32_t)(next_c - curr_c)});
             poorest_donors.add_all(-alpha);
             curr_c += alpha;
             demand -= poorest_donors.size() * alpha;
         }
 
         while (!poorest_donors.empty() && poorest_donors.min() == 0) {
-            bheap_item item = poorest_donors.pop();
-            users_[item.first]->rate_ += get_block_surplus(item.first);
+            auto [id, _] = poorest_donors.pop();
+            tenants_[id].rate_ += get_block_surplus(id);
         }
     }
 
     while (!poorest_donors.empty()) {
-        bheap_item item = poorest_donors.pop();
-        users_[item.first]->rate_ += get_block_surplus(item.first) - item.second;
+        auto [id, v] = poorest_donors.pop();
+        tenants_[id].rate_ += get_block_surplus(id) - v;
     }
-    delete temp_u;
 }
 
-void KarmaAllocator::donate_to_rich(uint32_t supply, std::vector<User*>& donors, std::vector<User*>& borrowers) {
-    for (const auto& d : donors) {
-        uint32_t to_donate = get_block_surplus(d->id_);
-        d->rate_ += to_donate;
+void KarmaAllocator::donate_to_rich(uint32_t supply, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers) {
+    for (uint32_t id : donors) {
+        uint32_t to_donate = get_block_surplus(id);
+        tenants_[id].rate_ += to_donate;
     }
 
-    for (auto& b : borrowers) {
-        b->blocks_ = std::min(b->credits_, b->demand_ - fair_share_);
+    std::vector<Candidate> borrower_c;
+    for (uint32_t id : borrowers) {
+        uint32_t blocks = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_);
+        Candidate c(id, tenants_[id].credits_, blocks);
+        borrower_c.push_back(c);
     }
-    std::sort(borrowers.begin(), borrowers.end(), [](const KarmaAllocator::User* a, const KarmaAllocator::User* b) {
-        return a->credits_ > b->credits_;
+    std::sort(borrower_c.begin(), borrower_c.end(), [](const Candidate& a, const Candidate& b) {
+        return a.credits_ > b.credits_;
     });
-    auto temp_u = new User(-1, 0);
-    borrowers.push_back(temp_u);
+    borrower_c.push_back(Candidate(-1, -1, 0));
 
-    int32_t curr_c = std::numeric_limits<int32_t>::max();
-    int32_t next_c = borrowers[0]->credits_;
+    int64_t curr_c = std::numeric_limits<int32_t>::max(), next_c = borrower_c[0].credits_;
 
     size_t idx = 0;
     auto richest_borrowers = BroadcastHeap();
@@ -193,42 +175,47 @@ void KarmaAllocator::donate_to_rich(uint32_t supply, std::vector<User*>& donors,
             curr_c = next_c;
         }
 
-        while (borrowers[idx]->credits_ == curr_c) {
-            richest_borrowers.push(borrowers[idx]->id_, borrowers[idx]->blocks_);
+        while (borrower_c[idx].credits_ == curr_c) {
+            richest_borrowers.push(borrower_c[idx].id_, borrower_c[idx].blocks_);
             idx++;
         }
-        next_c = borrowers[idx]->credits_;
+        next_c = borrower_c[idx].credits_;
 
         if (supply < richest_borrowers.size()) {
             for (uint32_t i = 0; i < supply; ++i) {
-                bheap_item it = richest_borrowers.pop();
-                int32_t blocks = it.second - 1;
+                auto [id, v] = richest_borrowers.pop();
                 supply--;
 
-                int32_t delta = std::min(users_[it.first]->credits_, users_[it.first]->demand_ - fair_share_) - blocks;
-                users_[it.first]->allocation_ += delta;
-                users_[it.first]->rate_ -= delta;
+                int32_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_) - v + 1;
+                tenants_[id].allocation_ += delta;
+                tenants_[id].rate_ -= delta;
             }
+            supply = 0;
         } else {
-            uint32_t alpha = std::min(richest_borrowers.min(), (uint32_t)(supply / richest_borrowers.size()));
+            uint32_t alpha = std::min(richest_borrowers.min(), supply / (uint32_t)richest_borrowers.size());
             richest_borrowers.add_all(-alpha);
             curr_c -= alpha;
             supply -= richest_borrowers.size() * alpha;
         }
 
         while (!richest_borrowers.empty() && richest_borrowers.min() == 0) {
-            bheap_item it = richest_borrowers.pop();
-            int64_t delta = std::min(users_[it.first]->credits_, users_[it.first]->demand_ - fair_share_);
-            users_[it.first]->allocation_ += delta;
-            users_[it.first]->rate_ -= delta;
+            auto [id, _] = richest_borrowers.pop();
+            int64_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_);
+            tenants_[id].allocation_ += delta;
+            tenants_[id].rate_ -= delta;
         }
     }
 
     while (!richest_borrowers.empty()) {
-        bheap_item it = richest_borrowers.pop();
-        int32_t delta = std::min(users_[it.first]->credits_, users_[it.first]->demand_ - fair_share_) - it.second;
-        users_[it.first]->allocation_ += delta;
-        users_[it.first]->rate_ -= delta;
+        auto [id, v] = richest_borrowers.pop();
+        int32_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_) - v;
+        tenants_[id].allocation_ += delta;
+        tenants_[id].rate_ -= delta;
     }
-    delete temp_u;
+}
+
+void KarmaAllocator::output_tenant(std::ostream& s, uint32_t id) {
+    auto t = tenants_[id];
+    s << "ID: " << id << " - alloc=" << t.allocation_ << "/" << t.demand_
+      << ", credits=" << t.credits_ << std::endl;
 }

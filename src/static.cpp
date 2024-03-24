@@ -24,3 +24,7 @@ void StaticAllocator::set_demand(uint32_t id, uint32_t demand) {
 uint32_t StaticAllocator::get_num_tenants() {
     return allocations_.size();
 }
+
+void StaticAllocator::output_tenant(std::ostream& s, uint32_t id) {
+    s << "ID: " << id << " - alloc=" << allocations_[id] << std::endl;
+}

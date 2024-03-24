@@ -1,26 +1,37 @@
 #include <iostream>
 
 #include "karma.h"
+#include "maxmin.h"
+#include "static.h"
+
+void test_simple(Allocator& a) {
+    a.add_user(1);
+    a.add_user(2);
+
+    a.set_demand(1, 3);
+    a.set_demand(2, 1);
+    a.allocate();
+
+    a.output_tenant(std::cout, 1);
+    a.output_tenant(std::cout, 2);
+
+    a.set_demand(1, 2);
+    a.set_demand(2, 4);
+    a.allocate();
+
+    a.output_tenant(std::cout, 1);
+    a.output_tenant(std::cout, 2);
+}
 
 int main() {
+    StaticAllocator sa(4);
+    MaxMinAllocator mma(4);
     KarmaAllocator karma(4, 0.5, 100);
 
-    karma.add_user(1);
-    karma.add_user(2);
-
-    karma.set_demand(1, 3);
-    karma.set_demand(2, 1);
-    karma.allocate();
-
-    karma.print_user(1);
-    karma.print_user(2);
-
-    karma.set_demand(1, 2);
-    karma.set_demand(2, 4);
-    karma.allocate();
-
-    karma.print_user(1);
-    karma.print_user(2);
-
+    test_simple(sa);
+    std::cout << std::endl;
+    test_simple(mma);
+    std::cout << std::endl;
+    test_simple(karma);
     return 0;
 }
