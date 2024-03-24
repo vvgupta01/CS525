@@ -22,6 +22,10 @@ class Allocator {
 
     virtual void output_tenant(std::ostream& s, uint32_t id) = 0;
 
+    void log(std::string msg) {
+        std::cerr << msg << std::endl;
+    }
+
    protected:
     uint32_t total_blocks_;
 };

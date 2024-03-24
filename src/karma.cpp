@@ -17,16 +17,21 @@ KarmaAllocator::KarmaAllocator(uint32_t num_blocks, float alpha, uint32_t init_c
 }
 
 void KarmaAllocator::add_user(uint32_t id) {
+    if (id == DUMMY_ID || tenants_.find(id) != tenants_.end()) {
+        return log("add_user(): tenant ID already exists");
+    }
+
     uint32_t credits = get_num_tenants() > 0 ? total_credits_ / get_num_tenants() : init_credits_;
     tenants_.emplace(id, credits);
     total_credits_ += credits;
 }
 
 void KarmaAllocator::remove_user(uint32_t id) {
-    if (id != PUBLIC_ID) {
-        total_credits_ -= tenants_[id].credits_;
-        tenants_.erase(id);
+    if (id == PUBLIC_ID || tenants_.find(id) == tenants_.end()) {
+        return log("remove_user(): tenant ID does not exist");
     }
+    total_credits_ -= tenants_[id].credits_;
+    tenants_.erase(id);
 }
 
 void KarmaAllocator::allocate() {
@@ -75,7 +80,11 @@ void KarmaAllocator::allocate() {
 }
 
 void KarmaAllocator::set_demand(uint32_t id, uint32_t demand) {
-    tenants_[id].demand_ = demand;
+    auto it = tenants_.find(id);
+    if (id == PUBLIC_ID || it == tenants_.end()) {
+        return log("set_demand(): tenant ID does not exist");
+    }
+    it->second.demand_ = demand;
 }
 
 uint32_t KarmaAllocator::get_num_tenants() {
@@ -98,13 +107,12 @@ void KarmaAllocator::borrow_from_poor(uint32_t demand, std::vector<uint32_t>& do
 
     std::vector<Candidate> donor_c;
     for (uint32_t id : donors) {
-        Candidate c(id, tenants_[id].credits_, get_block_surplus(id));
-        donor_c.push_back(c);
+        donor_c.emplace_back(id, tenants_[id].credits_, get_block_surplus(id));
     }
     std::sort(donor_c.begin(), donor_c.end(), [](const Candidate& a, const Candidate& b) {
         return a.credits_ < b.credits_;
     });
-    donor_c.push_back(Candidate(-1, std::numeric_limits<uint32_t>::max(), 0));
+    donor_c.emplace_back(DUMMY_ID, std::numeric_limits<uint32_t>::max(), 0);
 
     int64_t curr_c = -1, next_c = donor_c[0].credits_;
 
@@ -157,13 +165,12 @@ void KarmaAllocator::donate_to_rich(uint32_t supply, std::vector<uint32_t>& dono
     std::vector<Candidate> borrower_c;
     for (uint32_t id : borrowers) {
         uint32_t blocks = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_);
-        Candidate c(id, tenants_[id].credits_, blocks);
-        borrower_c.push_back(c);
+        borrower_c.emplace_back(id, tenants_[id].credits_, blocks);
     }
     std::sort(borrower_c.begin(), borrower_c.end(), [](const Candidate& a, const Candidate& b) {
         return a.credits_ > b.credits_;
     });
-    borrower_c.push_back(Candidate(-1, -1, 0));
+    borrower_c.emplace_back(DUMMY_ID, -1, 0);
 
     int64_t curr_c = std::numeric_limits<int32_t>::max(), next_c = borrower_c[0].credits_;
 

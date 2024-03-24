@@ -6,10 +6,16 @@ MaxMinAllocator::MaxMinAllocator(uint32_t num_blocks) : Allocator(num_blocks) {
 }
 
 void MaxMinAllocator::add_user(uint32_t id) {
+    if (tenants_.find(id) != tenants_.end()) {
+        return log("add_user(): tenant ID already exists");
+    }
     tenants_[id] = Tenant();
 }
 
 void MaxMinAllocator::remove_user(uint32_t id) {
+    if (tenants_.find(id) != tenants_.end()) {
+        return log("remove_user(): tenant ID does not exist");
+    }
     tenants_.erase(id);
 }
 
@@ -52,8 +58,12 @@ void MaxMinAllocator::allocate() {
 }
 
 void MaxMinAllocator::set_demand(uint32_t id, uint32_t demand) {
-    total_demand_ += demand - tenants_[id].demand_;
-    tenants_[id].demand_ = demand;
+    auto it = tenants_.find(id);
+    if (it == tenants_.end()) {
+        return log("set_demand(): tenant ID does not exist");
+    }
+    total_demand_ += demand - it->second.demand_;
+    it->second.demand_ = demand;
 }
 
 uint32_t MaxMinAllocator::get_num_tenants() {

@@ -7,6 +7,7 @@
 #include <vector>
 
 #define PUBLIC_ID 0
+#define DUMMY_ID std::numeric_limits<uint32_t>::max()
 
 class KarmaAllocator : public Allocator {
    public:
