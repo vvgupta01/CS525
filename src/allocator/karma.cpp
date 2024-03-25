@@ -1,9 +1,9 @@
-#include "karma.h"
+#include "allocator/karma.h"
 
 #include <algorithm>
 #include <iostream>
 
-#include "bheap.h"
+#include "allocator/bheap.h"
 
 KarmaAllocator::KarmaAllocator(uint32_t num_blocks, float alpha, uint32_t init_credits) : Allocator(num_blocks) {
     if (alpha < 0 || alpha > 1) {

@@ -1,4 +1,4 @@
-#include "static.h"
+#include "allocator/static.h"
 
 StaticAllocator::StaticAllocator(uint32_t num_blocks) : Allocator(num_blocks) {
 }

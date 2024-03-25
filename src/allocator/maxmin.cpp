@@ -1,6 +1,6 @@
-#include "maxmin.h"
+#include "allocator/maxmin.h"
 
-#include "bheap.h"
+#include "allocator/bheap.h"
 
 MaxMinAllocator::MaxMinAllocator(uint32_t num_blocks) : Allocator(num_blocks) {
 }

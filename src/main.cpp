@@ -1,8 +1,8 @@
 #include <iostream>
 
-#include "karma.h"
-#include "maxmin.h"
-#include "static.h"
+#include "allocator/karma.h"
+#include "allocator/maxmin.h"
+#include "allocator/static.h"
 
 void test_simple(Allocator& a) {
     a.add_user(1);

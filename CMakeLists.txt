@@ -8,7 +8,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(CTest)
 enable_testing()
 
-add_library(alloc src/karma.cpp src/static.cpp src/maxmin.cpp src/bheap.cpp)
+file(GLOB AllocSource src/allocator/*.cpp)
+add_library(alloc ${AllocSource})
 target_include_directories(alloc PUBLIC include)
 
 add_executable(main src/main.cpp)
