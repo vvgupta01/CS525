@@ -11,19 +11,21 @@
 
 class KarmaAllocator : public Allocator {
    public:
-    KarmaAllocator(uint32_t num_blocks, float alpha, uint32_t init_credits);
+    KarmaAllocator(uint64_t num_blocks, float alpha, uint32_t init_credits);
 
     virtual ~KarmaAllocator() = default;
 
-    void add_user(uint32_t id);
+    void add_tenant(uint32_t id);
 
-    void remove_user(uint32_t id);
+    void remove_tenant(uint32_t id);
 
     void allocate();
 
     void set_demand(uint32_t id, uint32_t demand);
 
     uint32_t get_num_tenants();
+
+    uint32_t get_allocation(uint32_t id);
 
     void output_tenant(std::ostream& s, uint32_t id);
 
@@ -48,13 +50,13 @@ class KarmaAllocator : public Allocator {
         }
     };
 
-    uint64_t total_credits_ = 0;
-    uint32_t public_blocks_, fair_share_, init_credits_;
+    uint64_t total_credits_ = 0, public_blocks_;
+    uint32_t fair_share_, init_credits_;
     std::unordered_map<uint32_t, Tenant> tenants_;
 
     uint32_t get_block_surplus(uint32_t id);
 
-    void borrow_from_poor(uint32_t demand, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers);
+    void borrow_from_poor(uint64_t demand, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers);
 
-    void donate_to_rich(uint32_t supply, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers);
+    void donate_to_rich(uint64_t supply, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers);
 };

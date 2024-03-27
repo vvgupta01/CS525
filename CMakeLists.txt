@@ -5,16 +5,30 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-include(CTest)
 enable_testing()
+
+include(FetchContent)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/eff443c6ef5eb6ab598bfaae27f9427fdb4f6af7.zip
+)
+FetchContent_MakeAvailable(googletest)
+
+include_directories(include)
 
 file(GLOB AllocSource src/allocator/*.cpp)
 add_library(alloc ${AllocSource})
-target_include_directories(alloc PUBLIC include)
 
 add_executable(main src/main.cpp)
-target_include_directories(main PUBLIC include)
 target_link_libraries(main PRIVATE alloc)
+
+file(GLOB AllocTestSource test/allocator/*.cpp)
+add_executable(alloctest ${AllocTestSource})
+target_link_libraries(alloctest PRIVATE alloc)
+target_link_libraries(alloctest PRIVATE gtest)
+
+include(GoogleTest)
+gtest_discover_tests(alloctest)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

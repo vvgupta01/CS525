@@ -2,19 +2,19 @@
 
 #include "allocator/bheap.h"
 
-MaxMinAllocator::MaxMinAllocator(uint32_t num_blocks) : Allocator(num_blocks) {
+MaxMinAllocator::MaxMinAllocator(uint64_t num_blocks) : Allocator(num_blocks) {
 }
 
-void MaxMinAllocator::add_user(uint32_t id) {
+void MaxMinAllocator::add_tenant(uint32_t id) {
     if (tenants_.find(id) != tenants_.end()) {
-        return log("add_user(): tenant ID already exists");
+        return log("add_tenant(): tenant ID already exists");
     }
     tenants_[id] = Tenant();
 }
 
-void MaxMinAllocator::remove_user(uint32_t id) {
+void MaxMinAllocator::remove_tenant(uint32_t id) {
     if (tenants_.find(id) != tenants_.end()) {
-        return log("remove_user(): tenant ID does not exist");
+        return log("remove_tenant(): tenant ID does not exist");
     }
     tenants_.erase(id);
 }
@@ -30,7 +30,7 @@ void MaxMinAllocator::allocate() {
             h.push(id, t.demand_);
         }
 
-        uint32_t supply = total_blocks_;
+        uint64_t supply = total_blocks_;
         while (supply > 0) {
             if (supply < h.size()) {
                 for (uint32_t i = 0; i < supply; ++i) {
@@ -39,7 +39,7 @@ void MaxMinAllocator::allocate() {
                 }
                 supply = 0;
             } else {
-                uint32_t alpha = std::min(h.min(), supply / (uint32_t)h.size());
+                int32_t alpha = std::min((int64_t)h.min(), (int64_t)(supply / h.size()));
                 h.add_all(-alpha);
                 supply -= h.size() * alpha;
             }
@@ -68,6 +68,10 @@ void MaxMinAllocator::set_demand(uint32_t id, uint32_t demand) {
 
 uint32_t MaxMinAllocator::get_num_tenants() {
     return tenants_.size();
+}
+
+uint32_t MaxMinAllocator::get_allocation(uint32_t id) {
+    return tenants_[id].allocation_;
 }
 
 void MaxMinAllocator::output_tenant(std::ostream& s, uint32_t id) {
