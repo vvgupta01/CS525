@@ -22,6 +22,10 @@ class Allocator {
 
     virtual uint32_t get_allocation(uint32_t id) = 0;
 
+    uint64_t get_total_blocks() {
+        return total_blocks_;
+    }
+
     virtual void output_tenant(std::ostream& s, uint32_t id) = 0;
 
     void log(std::string msg) {

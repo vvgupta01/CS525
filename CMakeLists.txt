@@ -19,6 +19,8 @@ include_directories(include)
 file(GLOB AllocSource src/allocator/*.cpp)
 add_library(alloc ${AllocSource})
 
+add_library(utils src/utils.cpp)
+
 add_executable(main src/main.cpp)
 target_link_libraries(main PRIVATE alloc)
 
@@ -26,6 +28,10 @@ file(GLOB AllocTestSource test/allocator/*.cpp)
 add_executable(alloctest ${AllocTestSource})
 target_link_libraries(alloctest PRIVATE alloc)
 target_link_libraries(alloctest PRIVATE gtest)
+
+add_executable(simtest test/simulator/simulate_test.cpp)
+target_link_libraries(simtest PRIVATE alloc)
+target_link_libraries(simtest PRIVATE utils)
 
 include(GoogleTest)
 gtest_discover_tests(alloctest)
