@@ -5,9 +5,18 @@
 #include <algorithm>
 #include <numeric>
 
-// demands and allocations of a tenant at each quanta
-std::vector<float> welfares(std::vector<std::vector<uint32_t>>& demands,
-                            std::vector<std::vector<uint32_t>>& allocations) {
+matrix generate_uniform_demands(uint32_t N, uint32_t T, uint32_t max_demand) {
+    matrix demands(T, std::vector<uint32_t>(N));
+
+    for (uint32_t t = 0; t < T; ++t) {
+        for (uint32_t i = 0; i < N; ++i) {
+            demands[t][i] = std::rand() % (max_demand + 1);
+        }
+    }
+    return demands;
+}
+
+std::vector<float> welfares(matrix& demands, matrix& allocations) {
     uint32_t N = demands[0].size();
     std::vector<float> welfares(N);
 
@@ -30,8 +39,7 @@ float fairness(std::vector<float>& welfares) {
     return *minmax.first / *minmax.second;
 }
 
-// demands and allocations of all tenants at each quanta
-float fairness(std::vector<std::vector<uint32_t>>& demands, std::vector<std::vector<uint32_t>>& allocations) {
+float fairness(matrix& demands, matrix& allocations) {
     uint64_t min_used = std::numeric_limits<uint64_t>::max(), max_used = 0;
 
     for (uint32_t i = 0; i < demands[0].size(); ++i) {
@@ -45,7 +53,6 @@ float fairness(std::vector<std::vector<uint32_t>>& demands, std::vector<std::vec
     return max_used > 0 ? (float)min_used / max_used : 1;
 }
 
-// demands and allocations of all tenants at a given quanta
 float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations) {
     float min_welfare = 1, max_welfare = 0;
     for (uint32_t i = 0; i < demands.size(); ++i) {
@@ -61,7 +68,6 @@ float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& al
     return max_welfare > 0 ? min_welfare / max_welfare : 1;
 }
 
-// demands and allocations of all tenants at a given quanta
 float utilization(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations, uint64_t blocks) {
     assert(blocks > 0);
 
@@ -70,4 +76,14 @@ float utilization(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocat
         used += std::min(demands[i], allocations[i]);
     }
     return (float)used / blocks;
+}
+
+float range_average(std::vector<float>& arr, size_t a, size_t b) {
+    assert(b >= a);
+
+    float sum = 0.0;
+    for (size_t i = a; i < b; ++i) {
+        sum += arr[i];
+    }
+    return b > a ? sum / (b - a) : 0;
 }

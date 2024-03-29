@@ -9,19 +9,19 @@
 
 int main(int argc, char** argv) {
     if (argc != 4) {
-        std::cerr << "usage: num_blocks num_tenants num_quanta" << std::endl;
+        std::cerr << "usage: fair_share fraction_selfish num_quanta" << std::endl;
         return 0;
     }
 
-    uint32_t B = std::atoi(argv[1]), N = std::atoi(argv[2]), T = std::atoi(argv[3]);
-    uint32_t fair_share = B / N;
-    auto raw_demands = generate_uniform_demands(N, T, fair_share * 2);
+    uint32_t fair_share = std::atoi(argv[1]), T = std::atoi(argv[3]);
+    float sigma = std::atof(argv[2]);
 
-    std::ofstream out("test/simulator/out/sim.csv");
-    for (float sigma = 0; sigma <= 1; sigma += 0.1) {
-        auto demands = raw_demands;
+    std::ofstream out("test/simulator/out/bench.csv");
+    for (float N = 10; N <= 10000; N *= 10) {
+        uint32_t B = fair_share * N;
+        auto demands = generate_uniform_demands(N, T, fair_share * 2);
+
         uint32_t si = sigma * N;
-
         for (uint32_t t = 0; t < T; ++t) {
             for (uint32_t i = 0; i < N; ++i) {
                 if (i < si) {
@@ -35,14 +35,14 @@ int main(int argc, char** argv) {
         KarmaAllocator karma(B, 0.5, B * T);
 
         Simulation s(N, T, sigma);
-        s.simulate(static_alloc, demands);
-        s.output_sim(out, "static");
+        s.benchmark(static_alloc, demands);
+        s.output_bench(out, "static");
 
-        s.simulate(maxmin_alloc, demands);
-        s.output_sim(out, "maxmin");
+        s.benchmark(maxmin_alloc, demands);
+        s.output_bench(out, "maxmin");
 
-        s.simulate(karma, demands);
-        s.output_sim(out, "karma");
+        s.benchmark(karma, demands);
+        s.output_bench(out, "karma");
     }
     out.close();
 }

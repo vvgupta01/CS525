@@ -67,7 +67,7 @@ void MaxMinAllocator::set_demand(uint32_t id, uint32_t demand) {
     }
 
     int64_t diff = (int64_t)demand - it->second.demand_;
-    assert(diff > 0 || -diff < total_demand_);
+    assert(diff > 0 || -diff <= total_demand_);
 
     total_demand_ += diff;
     it->second.demand_ = demand;
