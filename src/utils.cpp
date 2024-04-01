@@ -31,8 +31,8 @@ std::vector<float> welfares(matrix& demands, matrix& allocations) {
     return welfares;
 }
 
-float fairness(std::vector<float>& welfares) {
-    auto minmax = std::minmax_element(welfares.begin(), welfares.end());
+float fairness(std::vector<float>& welfares, size_t si) {
+    auto minmax = std::minmax_element(welfares.begin() + si, welfares.end());
     if (*minmax.second == 0) {
         return 1;
     }
@@ -53,12 +53,11 @@ float fairness(matrix& demands, matrix& allocations) {
     return max_used > 0 ? (float)min_used / max_used : 1;
 }
 
-float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations) {
+float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations, size_t si) {
     float min_welfare = 1, max_welfare = 0;
-    for (uint32_t i = 0; i < demands.size(); ++i) {
+    for (uint32_t i = si; i < demands.size(); ++i) {
         float welfare = 1.0;
         if (demands[i] > 0) {
-            // instantaneous welfare
             welfare = (float)std::min(demands[i], allocations[i]) / demands[i];
         }
 

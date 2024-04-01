@@ -7,11 +7,11 @@ matrix generate_uniform_demands(uint32_t N, uint32_t T, uint32_t max_demand);
 
 std::vector<float> welfares(matrix& demands, matrix& allocations);
 
-float fairness(std::vector<float>& welfares);
+float fairness(std::vector<float>& welfares, size_t si);
 
 float fairness(matrix& demands, matrix& allocations);
 
-float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations);
+float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations, size_t si);
 
 float utilization(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations, uint64_t blocks);
 

@@ -2,15 +2,19 @@
 
 #include <chrono>
 
+#include "assert.h"
 #include "utils.h"
 
-Simulation::Simulation(uint32_t N, uint32_t T, float sigma) : N_(N), T_(T), sigma_(sigma) {
+Simulation::Simulation(uint32_t N, uint32_t T, int sigma) : N_(N), T_(T), sigma_(sigma) {
+    assert(sigma >= 0 && sigma <= 100);
+
     utilizations_ = std::vector<float>(T);
     welfares_ = std::vector<float>(N);
     instant_fairness_ = std::vector<float>(T);
 }
 
 void Simulation::simulate(Allocator& alloc, matrix& demands) {
+    size_t si = sigma_ / 100.0 * N_;
     matrix allocations(T_, std::vector<uint32_t>(N_));
 
     for (uint32_t i = 1; i <= N_; ++i) {
@@ -28,18 +32,23 @@ void Simulation::simulate(Allocator& alloc, matrix& demands) {
             allocations[t][i - 1] = alloc.get_allocation(i);
         }
         utilizations_[t] = utilization(demands[t], allocations[t], alloc.get_total_blocks());
-        instant_fairness_[t] = instant_fairness(demands[t], allocations[t]);
+        instant_fairness_[t] = instant_fairness(demands[t], allocations[t], si);
     }
     avg_utilization_ = range_average(utilizations_, 0, T_);
     welfares_ = welfares(demands, allocations);
-    fairness_ = fairness(welfares_);
+    fairness_ = fairness(welfares_, si);
 
-    size_t si = N_ * sigma_;
     float alt_welfare_ = range_average(welfares_, si, N_);
     float selfish_welfare = range_average(welfares_, 0, si);
+
+    if (alt_welfare_ == 0) {
+        alt_welfare_ = selfish_welfare;
+    } else if (selfish_welfare == 0) {
+        selfish_welfare = alt_welfare_;
+    }
     welfare_disparity_ = alt_welfare_ - selfish_welfare;
 
-    avg_welfare_ = (alt_welfare_ + selfish_welfare) / 2;
+    avg_welfare_ = range_average(welfares_, 0, N_);
     avg_fairness_ = range_average(instant_fairness_, 0, T_);
     avg_runtime_ /= T_;
 }

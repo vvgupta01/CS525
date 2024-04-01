@@ -18,9 +18,9 @@ int main(int argc, char** argv) {
     auto raw_demands = generate_uniform_demands(N, T, fair_share * 2);
 
     std::ofstream out("test/simulator/out/sim.csv");
-    for (float sigma = 0; sigma <= 1; sigma += 0.1) {
+    for (int sigma = 0; sigma <= 100; sigma += 10) {
         auto demands = raw_demands;
-        uint32_t si = sigma * N;
+        uint32_t si = sigma / 100.0 * N;
 
         for (uint32_t t = 0; t < T; ++t) {
             for (uint32_t i = 0; i < N; ++i) {

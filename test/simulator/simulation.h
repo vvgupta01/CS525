@@ -7,7 +7,7 @@ typedef std::vector<std::vector<uint32_t>> matrix;
 
 struct Simulation {
     uint32_t N_, T_;
-    float sigma_;
+    int sigma_;
 
     std::vector<float> utilizations_, welfares_, instant_fairness_;
     float avg_utilization_ = 0, avg_fairness_ = 0, fairness_ = 0;
@@ -15,7 +15,7 @@ struct Simulation {
 
     double avg_runtime_ = 0;
 
-    Simulation(uint32_t N, uint32_t T, float sigma);
+    Simulation(uint32_t N, uint32_t T, int sigma);
 
     void simulate(Allocator& alloc, matrix& demands);
 
