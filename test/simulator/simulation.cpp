@@ -23,7 +23,7 @@ void Simulation::simulate(Allocator& alloc, matrix& demands) {
 
     for (uint32_t t = 0; t < T_; ++t) {
         for (uint32_t i = 1; i <= N_; ++i) {
-            alloc.set_demand(i, demands[t][i - 1]);
+            alloc.set_demand(i, demands[t][i - 1], i <= si);
         }
 
         alloc.allocate();
@@ -59,9 +59,10 @@ void Simulation::benchmark(Allocator& alloc, matrix& demands) {
         alloc.add_tenant(i);
     }
 
+    size_t si = sigma_ / 100.0 * N_;
     for (uint32_t t = 0; t < T_; ++t) {
         for (uint32_t i = 1; i <= N_; ++i) {
-            alloc.set_demand(i, demands[t][i - 1]);
+            alloc.set_demand(i, demands[t][i - 1], i <= si);
         }
 
         auto t1 = std::chrono::high_resolution_clock::now();

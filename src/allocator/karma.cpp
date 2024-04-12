@@ -3,42 +3,44 @@
 #include <assert.h>
 
 #include <algorithm>
-#include <iostream>
 
 #include "allocator/bheap.h"
 
-KarmaAllocator::KarmaAllocator(uint64_t num_blocks, float alpha, uint32_t init_credits) : Allocator(num_blocks) {
+KarmaAllocator::KarmaAllocator(uint64_t num_blocks, float alpha, uint32_t init_credits)
+    : Allocator(num_blocks), init_credits_(init_credits) {
     if (alpha < 0 || alpha > 1) {
         throw std::invalid_argument("alpha must be between 0 and 1");
     }
 
     public_blocks_ = alpha * total_blocks_;
-    init_credits_ = init_credits;
-
     tenants_.emplace(PUBLIC_ID, 0);
 }
 
 void KarmaAllocator::add_tenant(uint32_t id) {
     if (id == DUMMY_ID || tenants_.find(id) != tenants_.end()) {
-        return log("add_tenant(): tenant ID already exists");
+        throw std::invalid_argument("add_tenant(): tenant ID already exists");
     }
 
-    uint32_t credits = get_num_tenants() > 0 ? total_credits_ / get_num_tenants() : init_credits_;
+    uint64_t total_credits = 0;
+    for (const auto& [id, t] : tenants_) {
+        total_credits += t.credits_;
+    }
+
+    uint32_t credits = get_num_tenants() > 0 ? total_credits / get_num_tenants() : init_credits_;
     tenants_.emplace(id, credits);
-    total_credits_ += credits;
+
+    fair_share_ = get_free_blocks() / get_num_tenants();
 }
 
 void KarmaAllocator::remove_tenant(uint32_t id) {
     if (id == PUBLIC_ID || tenants_.find(id) == tenants_.end()) {
-        return log("remove_tenant(): tenant ID does not exist");
+        throw std::invalid_argument("remove_tenant(): tenant ID does not exist");
     }
-    total_credits_ -= tenants_[id].credits_;
     tenants_.erase(id);
+    fair_share_ = get_free_blocks() / get_num_tenants();
 }
 
 void KarmaAllocator::allocate() {
-    fair_share_ = (total_blocks_ - public_blocks_) / get_num_tenants();
-
     std::vector<uint32_t> donors, borrowers;
     uint64_t supply = public_blocks_, demand = 0;
 
@@ -70,21 +72,23 @@ void KarmaAllocator::allocate() {
         donate_to_rich(supply, donors, borrowers);
     }
 
-    total_credits_ = 0;
     for (auto& [id, t] : tenants_) {
         if (id == PUBLIC_ID) {
             t.credits_ = 0;
         } else {
             t.credits_ += t.rate_;
-            total_credits_ += t.credits_;
         }
     }
 }
 
-void KarmaAllocator::set_demand(uint32_t id, uint32_t demand) {
+void KarmaAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     auto it = tenants_.find(id);
     if (id == PUBLIC_ID || it == tenants_.end()) {
-        return log("set_demand(): tenant ID does not exist");
+        throw std::invalid_argument("set_demand(): tenant ID does not exist");
+    }
+
+    if (greedy) {
+        demand = std::max(fair_share_, demand);
     }
     it->second.demand_ = demand;
 }
@@ -98,6 +102,10 @@ uint32_t KarmaAllocator::get_block_surplus(uint32_t id) {
         return public_blocks_;
     }
     return fair_share_ - tenants_[id].demand_;
+}
+
+uint64_t KarmaAllocator::get_free_blocks() {
+    return total_blocks_ - public_blocks_;
 }
 
 void KarmaAllocator::borrow_from_poor(uint64_t demand, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers) {
@@ -226,7 +234,11 @@ void KarmaAllocator::donate_to_rich(uint64_t supply, std::vector<uint32_t>& dono
 }
 
 uint32_t KarmaAllocator::get_allocation(uint32_t id) {
-    return tenants_[id].allocation_;
+    auto it = tenants_.find(id);
+    if (it == tenants_.end()) {
+        throw std::invalid_argument("get_allocation(): tenant ID does not exist");
+    }
+    return it->second.allocation_;
 }
 
 void KarmaAllocator::output_tenant(std::ostream& s, uint32_t id) {

@@ -16,7 +16,7 @@ class StaticAllocator : public Allocator {
 
     void allocate();
 
-    void set_demand(uint32_t id, uint32_t demand);
+    void set_demand(uint32_t id, uint32_t demand, bool greedy);
 
     uint32_t get_num_tenants();
 
@@ -25,6 +25,5 @@ class StaticAllocator : public Allocator {
     void output_tenant(std::ostream& s, uint32_t id);
 
    private:
-    uint32_t fair_share_;
     std::unordered_map<uint32_t, uint32_t> allocations_;
 };

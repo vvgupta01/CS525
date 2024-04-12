@@ -7,8 +7,8 @@ TEST(KarmaAllocatorTest, TenantUnderDemand) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 1);
-    alloc.set_demand(2, 1);
+    alloc.set_demand(1, 1, false);
+    alloc.set_demand(2, 1, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 1);
@@ -20,8 +20,8 @@ TEST(KarmaAllocatorTest, UnevenFullDemand) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 3);
-    alloc.set_demand(2, 1);
+    alloc.set_demand(1, 3, false);
+    alloc.set_demand(2, 1, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 3);
@@ -33,8 +33,8 @@ TEST(KarmaAllocatorTest, OverDemandCreditParity) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 3);
-    alloc.set_demand(2, 3);
+    alloc.set_demand(1, 3, false);
+    alloc.set_demand(2, 3, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 2);
@@ -46,12 +46,12 @@ TEST(KarmaAllocatorTest, OverDemandCreditDisparity) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 3);
-    alloc.set_demand(2, 1);
+    alloc.set_demand(1, 3, false);
+    alloc.set_demand(2, 1, false);
     alloc.allocate();
 
-    alloc.set_demand(1, 2);
-    alloc.set_demand(2, 3);
+    alloc.set_demand(1, 2, false);
+    alloc.set_demand(2, 3, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 1);
@@ -63,15 +63,15 @@ TEST(KarmaAllocatorTest, GuaranteeFairShareCreditDisparity) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 0);
-    alloc.set_demand(2, 4);
+    alloc.set_demand(1, 0, false);
+    alloc.set_demand(2, 4, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 0);
     EXPECT_EQ(alloc.get_allocation(2), 4);
 
-    alloc.set_demand(1, 4);
-    alloc.set_demand(2, 1);
+    alloc.set_demand(1, 4, false);
+    alloc.set_demand(2, 1, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 3);
@@ -83,15 +83,15 @@ TEST(KarmaAllocatorTest, GuaranteeFairShareInsufficientCredits) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 0);
-    alloc.set_demand(2, 3);
+    alloc.set_demand(1, 0, false);
+    alloc.set_demand(2, 3, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 0);
     EXPECT_EQ(alloc.get_allocation(2), 2);
 
-    alloc.set_demand(1, 4);
-    alloc.set_demand(2, 2);
+    alloc.set_demand(1, 4, false);
+    alloc.set_demand(2, 2, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 3);

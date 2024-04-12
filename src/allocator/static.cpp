@@ -5,14 +5,14 @@ StaticAllocator::StaticAllocator(uint64_t num_blocks) : Allocator(num_blocks) {
 
 void StaticAllocator::add_tenant(uint32_t id) {
     if (allocations_.find(id) != allocations_.end()) {
-        return log("add_tenant(): tenant ID already exists");
+        throw std::invalid_argument("add_tenant(): tenant ID already exists");
     }
     allocations_[id] = 0;
 }
 
 void StaticAllocator::remove_tenant(uint32_t id) {
     if (allocations_.find(id) == allocations_.end()) {
-        return log("remove_tenant(): tenant ID does not exist");
+        throw std::invalid_argument("remove_tenant(): tenant ID does not exist");
     }
     allocations_.erase(id);
 }
@@ -24,9 +24,9 @@ void StaticAllocator::allocate() {
     }
 }
 
-void StaticAllocator::set_demand(uint32_t id, uint32_t demand) {
+void StaticAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     if (allocations_.find(id) == allocations_.end()) {
-        return log("set_demand(): tenant ID does not exist");
+        throw std::invalid_argument("set_demand(): tenant ID does not exist");
     }
 }
 
@@ -35,7 +35,11 @@ uint32_t StaticAllocator::get_num_tenants() {
 }
 
 uint32_t StaticAllocator::get_allocation(uint32_t id) {
-    return allocations_[id];
+    auto it = allocations_.find(id);
+    if (it == allocations_.end()) {
+        throw std::invalid_argument("get_allocation(): tenant ID does not exist");
+    }
+    return it->second;
 }
 
 void StaticAllocator::output_tenant(std::ostream& s, uint32_t id) {

@@ -7,8 +7,8 @@ TEST(StaticAllocatorTest, TenantUnderDemand) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 1);
-    alloc.set_demand(2, 1);
+    alloc.set_demand(1, 1, false);
+    alloc.set_demand(2, 1, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 2);
@@ -20,8 +20,8 @@ TEST(StaticAllocatorTest, UnevenFullDemand) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 3);
-    alloc.set_demand(2, 1);
+    alloc.set_demand(1, 3, false);
+    alloc.set_demand(2, 1, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 2);
@@ -33,8 +33,8 @@ TEST(StaticAllocatorTest, OverDemand) {
     alloc.add_tenant(1);
     alloc.add_tenant(2);
 
-    alloc.set_demand(1, 2);
-    alloc.set_demand(2, 3);
+    alloc.set_demand(1, 2, false);
+    alloc.set_demand(2, 3, false);
     alloc.allocate();
 
     EXPECT_EQ(alloc.get_allocation(1), 2);

@@ -3,6 +3,8 @@
 #include <functional>
 #include <iostream>
 
+#define PUBLIC_ID 0
+
 class Allocator {
    public:
     Allocator(uint32_t num_blocks) : total_blocks_(num_blocks) {
@@ -16,7 +18,7 @@ class Allocator {
 
     virtual void allocate() = 0;
 
-    virtual void set_demand(uint32_t id, uint32_t demand) = 0;
+    virtual void set_demand(uint32_t id, uint32_t demand, bool greedy) = 0;
 
     virtual uint32_t get_num_tenants() = 0;
 
@@ -28,10 +30,7 @@ class Allocator {
 
     virtual void output_tenant(std::ostream& s, uint32_t id) = 0;
 
-    void log(std::string msg) {
-        std::cerr << msg << std::endl;
-    }
-
    protected:
     uint64_t total_blocks_;
+    uint32_t fair_share_;
 };

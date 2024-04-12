@@ -9,21 +9,27 @@ MaxMinAllocator::MaxMinAllocator(uint64_t num_blocks) : Allocator(num_blocks) {
 
 void MaxMinAllocator::add_tenant(uint32_t id) {
     if (tenants_.find(id) != tenants_.end()) {
-        return log("add_tenant(): tenant ID already exists");
+        throw std::invalid_argument("add_tenant(): tenant ID already exists");
     }
     tenants_[id] = Tenant();
+    fair_share_ = total_blocks_ / get_num_tenants();
 }
 
 void MaxMinAllocator::remove_tenant(uint32_t id) {
     if (tenants_.find(id) != tenants_.end()) {
-        return log("remove_tenant(): tenant ID does not exist");
+        throw std::invalid_argument("remove_tenant(): tenant ID does not exist");
     }
-    total_demand_ -= tenants_[id].demand_;
     tenants_.erase(id);
+    fair_share_ = total_blocks_ / get_num_tenants();
 }
 
 void MaxMinAllocator::allocate() {
-    if (total_blocks_ >= total_demand_) {
+    uint64_t total_demand = 0;
+    for (auto& [_, t] : tenants_) {
+        total_demand += t.demand_;
+    }
+
+    if (total_blocks_ >= total_demand) {
         for (auto& [_, t] : tenants_) {
             t.allocation_ = t.demand_;
         }
@@ -60,16 +66,15 @@ void MaxMinAllocator::allocate() {
     }
 }
 
-void MaxMinAllocator::set_demand(uint32_t id, uint32_t demand) {
+void MaxMinAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     auto it = tenants_.find(id);
     if (it == tenants_.end()) {
-        return log("set_demand(): tenant ID does not exist");
+        throw std::invalid_argument("set_demand(): tenant ID does not exist");
     }
 
-    int64_t diff = (int64_t)demand - it->second.demand_;
-    assert(diff > 0 || -diff <= total_demand_);
-
-    total_demand_ += diff;
+    if (greedy) {
+        demand = std::max(fair_share_, demand);
+    }
     it->second.demand_ = demand;
 }
 
@@ -78,7 +83,11 @@ uint32_t MaxMinAllocator::get_num_tenants() {
 }
 
 uint32_t MaxMinAllocator::get_allocation(uint32_t id) {
-    return tenants_[id].allocation_;
+    auto it = tenants_.find(id);
+    if (it == tenants_.end()) {
+        throw std::invalid_argument("get_allocation(): tenant ID does not exist");
+    }
+    return it->second.allocation_;
 }
 
 void MaxMinAllocator::output_tenant(std::ostream& s, uint32_t id) {

@@ -6,7 +6,6 @@
 
 #include "allocator.h"
 
-#define PUBLIC_ID 0
 #define DUMMY_ID std::numeric_limits<uint32_t>::max()
 
 class KarmaAllocator : public Allocator {
@@ -21,7 +20,7 @@ class KarmaAllocator : public Allocator {
 
     void allocate();
 
-    void set_demand(uint32_t id, uint32_t demand);
+    void set_demand(uint32_t id, uint32_t demand, bool greedy);
 
     uint32_t get_num_tenants();
 
@@ -50,11 +49,13 @@ class KarmaAllocator : public Allocator {
         }
     };
 
-    uint64_t total_credits_ = 0, public_blocks_;
-    uint32_t fair_share_, init_credits_;
+    uint64_t public_blocks_;
+    uint32_t init_credits_;
     std::unordered_map<uint32_t, Tenant> tenants_;
 
     uint32_t get_block_surplus(uint32_t id);
+
+    uint64_t get_free_blocks();
 
     void borrow_from_poor(uint64_t demand, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers);
 

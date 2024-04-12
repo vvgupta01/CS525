@@ -19,16 +19,7 @@ int main(int argc, char** argv) {
     std::ofstream out("test/simulator/out/bench.csv");
     for (float N = 10; N <= 10000; N *= 10) {
         uint32_t B = fair_share * N;
-        auto demands = generate_uniform_demands(N, T, fair_share * 2);
-
-        uint32_t si = sigma * N;
-        for (uint32_t t = 0; t < T; ++t) {
-            for (uint32_t i = 0; i < N; ++i) {
-                if (i < si) {
-                    demands[t][i] = std::max(demands[t][i], fair_share);
-                }
-            }
-        }
+        matrix demands = generate_uniform_demands(N, T, fair_share * 2);
 
         StaticAllocator static_alloc(B);
         MaxMinAllocator maxmin_alloc(B);

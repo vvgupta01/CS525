@@ -16,7 +16,7 @@ class MaxMinAllocator : public Allocator {
 
     void allocate();
 
-    void set_demand(uint32_t id, uint32_t demand);
+    void set_demand(uint32_t id, uint32_t demand, bool greedy);
 
     uint32_t get_num_tenants();
 
@@ -29,6 +29,5 @@ class MaxMinAllocator : public Allocator {
         uint32_t demand_ = 0, allocation_ = 0;
     };
 
-    uint64_t total_demand_ = 0;
     std::unordered_map<uint32_t, Tenant> tenants_;
 };
