@@ -41,7 +41,3 @@ uint32_t StaticAllocator::get_allocation(uint32_t id) {
     }
     return it->second;
 }
-
-void StaticAllocator::output_tenant(std::ostream& s, uint32_t id) {
-    s << "ID: " << id << " - alloc=" << allocations_[id] << std::endl;
-}

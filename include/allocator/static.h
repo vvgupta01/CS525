@@ -22,8 +22,6 @@ class StaticAllocator : public Allocator {
 
     uint32_t get_allocation(uint32_t id);
 
-    void output_tenant(std::ostream& s, uint32_t id);
-
    private:
     std::unordered_map<uint32_t, uint32_t> allocations_;
 };

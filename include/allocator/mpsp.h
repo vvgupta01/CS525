@@ -2,7 +2,8 @@
 
 #include "allocator.h"
 
-typedef std::pair<uint32_t, uint32_t> q_item;
+typedef std::pair<uint32_t, uint32_t> pi;
+typedef std::function<uint32_t(uint32_t)> fi;
 
 struct Bid {
     uint32_t qty_ = 0, price_ = 0;
@@ -18,7 +19,7 @@ struct Bid {
 
 class MPSPAllocator : public Allocator {
    public:
-    MPSPAllocator(uint64_t num_blocks, uint64_t base_blocks, uint32_t block_val);
+    MPSPAllocator(uint64_t num_blocks, uint64_t base_blocks, fi valuation);
 
     virtual ~MPSPAllocator() = default;
 
@@ -34,27 +35,33 @@ class MPSPAllocator : public Allocator {
 
     uint32_t get_allocation(uint32_t id);
 
+    uint32_t get_payment(uint32_t id);
+
+    fi get_valuation();
+
+    pi get_border_bids();
+
    private:
     struct Tenant {
         Bid bid_;
         uint32_t allocation_ = 0, payment_ = 0;
-        static uint32_t BLOCK_VAL;
+        fi valuation_;
 
-        Tenant() {}
-
-        static uint32_t valuation(uint32_t blocks) {
-            return BLOCK_VAL;
+        Tenant() {
         }
 
-        void bid_auction(uint32_t demand, uint32_t fair_share, bool greedy,
-                         uint32_t lowest_accept, uint32_t highest_reject);
+        Tenant(fi valuation) : valuation_(valuation) {
+        }
+
+        void bid_auction(uint32_t demand, uint32_t fair_share, uint32_t delta, pi border_bids);
     };
 
     uint64_t base_blocks_;
-    uint32_t lowest_accept_ = 0, highest_reject_ = 0;
+    pi border_bids_;
+    fi valuation_;
     std::unordered_map<uint32_t, Tenant> tenants_;
 
-    void charge_exclusion_payment(Tenant& t, std::vector<q_item>& remaining_bids, uint32_t free_blocks, uint64_t welfare);
+    void charge_exclusion_payment(Tenant& t, std::vector<pi>& remaining_bids, uint32_t free_blocks, uint64_t welfare);
 
     uint32_t get_fair_share();
 

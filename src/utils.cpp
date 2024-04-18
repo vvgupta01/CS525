@@ -5,12 +5,20 @@
 #include <algorithm>
 #include <numeric>
 
+bool rand_bool() {
+    return rand() > RAND_MAX / 2;
+}
+
+int rand_uniform(int min, int max) {
+    return std::rand() % (max - min + 1) + min;
+}
+
 matrix generate_uniform_demands(uint32_t N, uint32_t T, uint32_t max_demand) {
     matrix demands(T, std::vector<uint32_t>(N));
 
     for (uint32_t t = 0; t < T; ++t) {
         for (uint32_t i = 0; i < N; ++i) {
-            demands[t][i] = std::rand() % (max_demand + 1);
+            demands[t][i] = rand_uniform(0, (int)max_demand);
         }
     }
     return demands;
@@ -31,6 +39,23 @@ std::vector<float> welfares(matrix& demands, matrix& allocations) {
     return welfares;
 }
 
+std::vector<float> welfares(matrix& demands, matrix& allocations,
+                            matrix& payments, fi valuation) {
+    uint32_t N = demands[0].size();
+    std::vector<float> welfares(N);
+
+    for (uint32_t i = 0; i < N; ++i) {
+        uint64_t actual = 0, expected = 0;
+        for (uint32_t t = 0; t < demands.size(); ++t) {
+            uint32_t val = std::min(demands[t][i], allocations[t][i]) * (float)valuation(demands[t][i]) / payments[t][i];
+            actual += std::min(demands[t][i], val);
+            expected += demands[t][i];
+        }
+        welfares[i] = expected > 0 ? (float)actual / expected : 1;
+    }
+    return welfares;
+}
+
 float fairness(std::vector<float>& welfares, size_t si) {
     auto minmax = std::minmax_element(welfares.begin() + si, welfares.end());
     if (*minmax.second == 0) {
@@ -39,26 +64,42 @@ float fairness(std::vector<float>& welfares, size_t si) {
     return *minmax.first / *minmax.second;
 }
 
-float fairness(matrix& demands, matrix& allocations) {
-    uint64_t min_used = std::numeric_limits<uint64_t>::max(), max_used = 0;
+// float fairness(matrix& demands, matrix& allocations) {
+//     uint64_t min_used = std::numeric_limits<uint64_t>::max(), max_used = 0;
 
-    for (uint32_t i = 0; i < demands[0].size(); ++i) {
-        uint64_t used = 0;
-        for (uint32_t t = 0; t < demands.size(); ++t) {
-            used += std::min(demands[t][i], allocations[t][i]);
-        }
-        min_used = std::min(min_used, used);
-        max_used = std::max(max_used, used);
-    }
-    return max_used > 0 ? (float)min_used / max_used : 1;
-}
+//     for (uint32_t i = 0; i < demands[0].size(); ++i) {
+//         uint64_t used = 0;
+//         for (uint32_t t = 0; t < demands.size(); ++t) {
+//             used += std::min(demands[t][i], allocations[t][i]);
+//         }
+//         min_used = std::min(min_used, used);
+//         max_used = std::max(max_used, used);
+//     }
+//     return max_used > 0 ? (float)min_used / max_used : 1;
+// }
 
 float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations, size_t si) {
     float min_welfare = 1, max_welfare = 0;
     for (uint32_t i = si; i < demands.size(); ++i) {
-        float welfare = 1.0;
+        float welfare = 1;
         if (demands[i] > 0) {
             welfare = (float)std::min(demands[i], allocations[i]) / demands[i];
+        }
+
+        min_welfare = std::min(min_welfare, welfare);
+        max_welfare = std::max(max_welfare, welfare);
+    }
+    return max_welfare > 0 ? min_welfare / max_welfare : 1;
+}
+
+float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations,
+                       std::vector<uint32_t>& payments, fi valuation, size_t si) {
+    float min_welfare = 1, max_welfare = 0;
+    for (uint32_t i = si; i < demands.size(); ++i) {
+        float welfare = 1;
+        if (demands[i] > 0) {
+            uint32_t val = std::min(demands[i], allocations[i]) * (float)valuation(demands[i]) / payments[i];
+            welfare = (float)std::min(demands[i], val) / demands[i];
         }
 
         min_welfare = std::min(min_welfare, welfare);

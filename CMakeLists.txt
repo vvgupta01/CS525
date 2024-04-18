@@ -21,24 +21,15 @@ add_library(alloc ${AllocSource})
 
 add_library(utils src/utils.cpp)
 add_library(sim test/simulator/simulation.cpp)
-
-add_executable(main src/main.cpp)
-target_link_libraries(main PRIVATE alloc)
+target_link_libraries(sim PRIVATE alloc)
 
 add_executable(alloctest test/allocator/allocator_test.cpp)
 target_link_libraries(alloctest PRIVATE alloc)
 target_link_libraries(alloctest PRIVATE gtest)
 
 add_executable(simtest test/simulator/simulate_test.cpp)
-target_link_libraries(simtest PRIVATE alloc)
 target_link_libraries(simtest PRIVATE utils)
 target_link_libraries(simtest PRIVATE sim)
-
-add_executable(benchtest test/simulator/benchmark_test.cpp)
-target_link_libraries(benchtest PRIVATE alloc)
-target_link_libraries(benchtest PRIVATE utils)
-target_link_libraries(benchtest PRIVATE sim)
-
 
 include(GoogleTest)
 gtest_discover_tests(alloctest)

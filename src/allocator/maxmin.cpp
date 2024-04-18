@@ -89,8 +89,3 @@ uint32_t MaxMinAllocator::get_allocation(uint32_t id) {
     }
     return it->second.allocation_;
 }
-
-void MaxMinAllocator::output_tenant(std::ostream& s, uint32_t id) {
-    auto t = tenants_[id];
-    s << "ID: " << id << " - alloc=" << t.allocation_ << "/" << t.demand_ << std::endl;
-}

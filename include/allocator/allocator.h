@@ -28,8 +28,6 @@ class Allocator {
         return total_blocks_;
     }
 
-    virtual void output_tenant(std::ostream& s, uint32_t id) = 0;
-
    protected:
     uint64_t total_blocks_;
     uint32_t fair_share_;

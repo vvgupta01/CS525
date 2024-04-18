@@ -240,9 +240,3 @@ uint32_t KarmaAllocator::get_allocation(uint32_t id) {
     }
     return it->second.allocation_;
 }
-
-void KarmaAllocator::output_tenant(std::ostream& s, uint32_t id) {
-    auto t = tenants_[id];
-    s << "ID: " << id << " - alloc=" << t.allocation_ << "/" << t.demand_
-      << ", credits=" << t.credits_ << std::endl;
-}
