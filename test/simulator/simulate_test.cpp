@@ -4,12 +4,29 @@
 #include "allocator/karma.h"
 #include "allocator/maxmin.h"
 #include "allocator/mpsp.h"
+#include "allocator/sharp.h"
 #include "allocator/static.h"
 #include "simulation.h"
 #include "utils.h"
 
 uint32_t valuation(uint32_t q) {
     return 100;
+}
+
+void print_progress(uint progress, uint width = 100) {
+    std::cout << "[";
+    int pos = width * progress / 100.0;
+    for (size_t i = 0; i < width; ++i) {
+        if (i < pos) {
+            std::cout << "=";
+        } else if (i == pos) {
+            std::cout << ">";
+        } else {
+            std::cout << " ";
+        }
+    }
+    std::cout << "] " << progress << "%\r";
+    std::cout.flush();
 }
 
 int main(int argc, char** argv) {
@@ -24,14 +41,16 @@ int main(int argc, char** argv) {
 
     std::ofstream sim_out("test/simulator/out/sim.csv");
     std::ofstream auction_out("test/simulator/out/auction.csv");
+    std::ofstream barter_out("test/simulator/out/barter.csv");
 
     for (int sigma = 0; sigma <= 100; sigma += 10) {
-        std::cout << "simulating sigma=" << sigma << "..." << std::endl;
+        print_progress(sigma);
 
         StaticAllocator static_alloc(B);
         MaxMinAllocator maxmin_alloc(B);
-        KarmaAllocator karma(B, 0.5, B * T);
+        KarmaAllocator karma(B, 1, B * T);
         MPSPAllocator mpsp(B, 0, valuation);
+        SharpAllocator sharp(B, 2, 2);
 
         Simulation s(N, T, sigma);
         s.simulate(static_alloc, demands);
@@ -46,9 +65,13 @@ int main(int argc, char** argv) {
         s.simulate(mpsp, demands);
         s.output_sim(sim_out, "mpsp");
 
+        s.simulate(sharp, demands);
+        s.output_sim(sim_out, "sharp");
         if (sigma == 50) {
             s.output_auction(auction_out);
+            s.output_barter(barter_out);
         }
     }
+    std::cout << std::endl;
     sim_out.close();
 }

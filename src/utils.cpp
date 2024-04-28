@@ -5,12 +5,24 @@
 #include <algorithm>
 #include <numeric>
 
+std::random_device rd;
+std::mt19937 gen(rd());
+
 bool rand_bool() {
     return rand() > RAND_MAX / 2;
 }
 
 int rand_uniform(int min, int max) {
-    return std::rand() % (max - min + 1) + min;
+    auto dist = std::uniform_int_distribution(min, max);
+    return dist(gen);
+}
+
+std::discrete_distribution<> get_rand_discrete(std::vector<uint32_t>& weights) {
+    return std::discrete_distribution<>(weights.begin(), weights.end());
+}
+
+int sample_rand_discrete(std::discrete_distribution<>& dist) {
+    return dist(gen);
 }
 
 matrix generate_uniform_demands(uint32_t N, uint32_t T, uint32_t max_demand) {
@@ -47,8 +59,7 @@ std::vector<float> welfares(matrix& demands, matrix& allocations,
     for (uint32_t i = 0; i < N; ++i) {
         uint64_t actual = 0, expected = 0;
         for (uint32_t t = 0; t < demands.size(); ++t) {
-            uint32_t val = std::min(demands[t][i], allocations[t][i]) * (float)valuation(demands[t][i]) / payments[t][i];
-            actual += std::min(demands[t][i], val);
+            actual += std::min(demands[t][i], allocations[t][i] * valuation(demands[t][i]) / payments[t][i]);
             expected += demands[t][i];
         }
         welfares[i] = expected > 0 ? (float)actual / expected : 1;

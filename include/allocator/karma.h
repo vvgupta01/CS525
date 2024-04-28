@@ -22,6 +22,8 @@ class KarmaAllocator : public Allocator {
 
     void set_demand(uint32_t id, uint32_t demand, bool greedy);
 
+    uint32_t get_fair_share();
+
     uint32_t get_num_tenants();
 
     uint32_t get_allocation(uint32_t id);

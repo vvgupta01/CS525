@@ -18,9 +18,9 @@ void StaticAllocator::remove_tenant(uint32_t id) {
 }
 
 void StaticAllocator::allocate() {
-    fair_share_ = total_blocks_ / get_num_tenants();
+    uint32_t fair_share = get_fair_share();
     for (auto& a : allocations_) {
-        a.second = fair_share_;
+        a.second = fair_share;
     }
 }
 
@@ -28,6 +28,10 @@ void StaticAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     if (allocations_.find(id) == allocations_.end()) {
         throw std::invalid_argument("set_demand(): tenant ID does not exist");
     }
+}
+
+uint32_t StaticAllocator::get_fair_share() {
+    return num_blocks_ / get_num_tenants();
 }
 
 uint32_t StaticAllocator::get_num_tenants() {

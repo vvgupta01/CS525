@@ -1,12 +1,15 @@
-#include <functional>
+#include <random>
 #include <vector>
 
-typedef std::vector<std::vector<uint32_t>> matrix;
-typedef std::function<uint32_t(uint32_t)> fi;
+#include "types.h"
 
 bool rand_bool();
 
-int rand_uniform(uint32_t min, uint32_t max);
+int rand_uniform(int min, int max);
+
+std::discrete_distribution<> get_rand_discrete(std::vector<uint32_t>& weights);
+
+int sample_rand_discrete(std::discrete_distribution<>& dist);
 
 matrix generate_uniform_demands(uint32_t N, uint32_t T, uint32_t max_demand);
 

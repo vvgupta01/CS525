@@ -5,8 +5,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-enable_testing()
-
 include(FetchContent)
 FetchContent_Declare(
     googletest
@@ -16,22 +14,18 @@ FetchContent_MakeAvailable(googletest)
 
 include_directories(include)
 
-file(GLOB AllocSource src/allocator/*.cpp)
+file(GLOB AllocSource src/allocator/*.cpp src/utils.cpp)
 add_library(alloc ${AllocSource})
-
-add_library(utils src/utils.cpp)
-add_library(sim test/simulator/simulation.cpp)
-target_link_libraries(sim PRIVATE alloc)
 
 add_executable(alloctest test/allocator/allocator_test.cpp)
 target_link_libraries(alloctest PRIVATE alloc)
 target_link_libraries(alloctest PRIVATE gtest)
 
-add_executable(simtest test/simulator/simulate_test.cpp)
-target_link_libraries(simtest PRIVATE utils)
-target_link_libraries(simtest PRIVATE sim)
+add_executable(simtest test/simulator/simulate_test.cpp test/simulator/simulation.cpp)
+target_link_libraries(simtest PRIVATE alloc)
 
 include(GoogleTest)
+enable_testing()
 gtest_discover_tests(alloctest)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})

@@ -1,9 +1,7 @@
 #pragma once
 
 #include "allocator.h"
-
-typedef std::pair<uint32_t, uint32_t> pi;
-typedef std::function<uint32_t(uint32_t)> fi;
+#include "types.h"
 
 struct Bid {
     uint32_t qty_ = 0, price_ = 0;
@@ -31,6 +29,8 @@ class MPSPAllocator : public Allocator {
 
     void set_demand(uint32_t id, uint32_t demand, bool greedy);
 
+    uint32_t get_fair_share();
+
     uint32_t get_num_tenants();
 
     uint32_t get_allocation(uint32_t id);
@@ -53,7 +53,7 @@ class MPSPAllocator : public Allocator {
         Tenant(fi valuation) : valuation_(valuation) {
         }
 
-        void bid_auction(uint32_t demand, uint32_t fair_share, uint32_t delta, pi border_bids);
+        void bid_auction(uint32_t demand, uint32_t fair_share, bool greedy, pi border_bids);
     };
 
     uint64_t base_blocks_;
@@ -61,9 +61,7 @@ class MPSPAllocator : public Allocator {
     fi valuation_;
     std::unordered_map<uint32_t, Tenant> tenants_;
 
-    void charge_exclusion_payment(Tenant& t, std::vector<pi>& remaining_bids, uint32_t free_blocks, uint64_t welfare);
-
-    uint32_t get_fair_share();
-
     uint64_t get_free_blocks();
+
+    void charge_exclusion_payment(int id, std::vector<pi>& remaining_bids, uint32_t free_blocks, uint64_t welfare);
 };

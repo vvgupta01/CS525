@@ -12,7 +12,7 @@ KarmaAllocator::KarmaAllocator(uint64_t num_blocks, float alpha, uint32_t init_c
         throw std::invalid_argument("alpha must be between 0 and 1");
     }
 
-    public_blocks_ = alpha * total_blocks_;
+    public_blocks_ = alpha * num_blocks_;
     tenants_.emplace(PUBLIC_ID, 0);
 }
 
@@ -28,8 +28,6 @@ void KarmaAllocator::add_tenant(uint32_t id) {
 
     uint32_t credits = get_num_tenants() > 0 ? total_credits / get_num_tenants() : init_credits_;
     tenants_.emplace(id, credits);
-
-    fair_share_ = get_free_blocks() / get_num_tenants();
 }
 
 void KarmaAllocator::remove_tenant(uint32_t id) {
@@ -37,11 +35,11 @@ void KarmaAllocator::remove_tenant(uint32_t id) {
         throw std::invalid_argument("remove_tenant(): tenant ID does not exist");
     }
     tenants_.erase(id);
-    fair_share_ = get_free_blocks() / get_num_tenants();
 }
 
 void KarmaAllocator::allocate() {
     std::vector<uint32_t> donors, borrowers;
+    uint32_t fair_share = get_fair_share();
     uint64_t supply = public_blocks_, demand = 0;
 
     for (auto& [id, t] : tenants_) {
@@ -52,14 +50,14 @@ void KarmaAllocator::allocate() {
         }
         t.credits_ += public_blocks_ / get_num_tenants();
 
-        if (t.demand_ < fair_share_) {
+        if (t.demand_ < fair_share) {
             donors.push_back(id);
-            supply += fair_share_ - t.demand_;
-        } else if (t.demand_ > fair_share_) {
+            supply += fair_share - t.demand_;
+        } else if (t.demand_ > fair_share) {
             borrowers.push_back(id);
-            demand += std::min(t.demand_ - fair_share_, t.credits_);
+            demand += std::min(t.demand_ - fair_share, t.credits_);
         }
-        t.allocation_ = std::min(t.demand_, fair_share_);
+        t.allocation_ = std::min(t.demand_, fair_share);
     }
 
     if (public_blocks_ > 0) {
@@ -88,7 +86,7 @@ void KarmaAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     }
 
     if (greedy) {
-        demand = std::max(fair_share_, demand);
+        demand = std::max(get_fair_share(), demand);
     }
     it->second.demand_ = demand;
 }
@@ -101,16 +99,17 @@ uint32_t KarmaAllocator::get_block_surplus(uint32_t id) {
     if (id == PUBLIC_ID) {
         return public_blocks_;
     }
-    return fair_share_ - tenants_[id].demand_;
+    return get_fair_share() - tenants_[id].demand_;
 }
 
 uint64_t KarmaAllocator::get_free_blocks() {
-    return total_blocks_ - public_blocks_;
+    return num_blocks_ - public_blocks_;
 }
 
 void KarmaAllocator::borrow_from_poor(uint64_t demand, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers) {
+    uint32_t fair_share = get_fair_share();
     for (uint32_t id : borrowers) {
-        uint32_t to_borrow = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_);
+        uint32_t to_borrow = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share);
         tenants_[id].allocation_ += to_borrow;
         tenants_[id].rate_ -= to_borrow;
     }
@@ -168,6 +167,7 @@ void KarmaAllocator::borrow_from_poor(uint64_t demand, std::vector<uint32_t>& do
 }
 
 void KarmaAllocator::donate_to_rich(uint64_t supply, std::vector<uint32_t>& donors, std::vector<uint32_t>& borrowers) {
+    uint32_t fair_share = get_fair_share();
     for (uint32_t id : donors) {
         uint32_t to_donate = get_block_surplus(id);
         tenants_[id].rate_ += to_donate;
@@ -175,7 +175,7 @@ void KarmaAllocator::donate_to_rich(uint64_t supply, std::vector<uint32_t>& dono
 
     std::vector<Candidate> borrower_c;
     for (uint32_t id : borrowers) {
-        uint32_t blocks = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_);
+        uint32_t blocks = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share);
         borrower_c.emplace_back(id, tenants_[id].credits_, blocks);
     }
     std::sort(borrower_c.begin(), borrower_c.end(), [](const Candidate& a, const Candidate& b) {
@@ -205,7 +205,7 @@ void KarmaAllocator::donate_to_rich(uint64_t supply, std::vector<uint32_t>& dono
                 auto [id, v] = richest_borrowers.pop();
                 supply--;
 
-                int32_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_) - v + 1;
+                int32_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share) - v + 1;
                 tenants_[id].allocation_ += delta;
                 tenants_[id].rate_ -= delta;
             }
@@ -219,7 +219,7 @@ void KarmaAllocator::donate_to_rich(uint64_t supply, std::vector<uint32_t>& dono
 
         while (!richest_borrowers.empty() && richest_borrowers.min() == 0) {
             auto [id, _] = richest_borrowers.pop();
-            int64_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_);
+            int64_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share);
             tenants_[id].allocation_ += delta;
             tenants_[id].rate_ -= delta;
         }
@@ -227,10 +227,14 @@ void KarmaAllocator::donate_to_rich(uint64_t supply, std::vector<uint32_t>& dono
 
     while (!richest_borrowers.empty()) {
         auto [id, v] = richest_borrowers.pop();
-        int32_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share_) - v;
+        int32_t delta = std::min(tenants_[id].credits_, tenants_[id].demand_ - fair_share) - v;
         tenants_[id].allocation_ += delta;
         tenants_[id].rate_ -= delta;
     }
+}
+
+uint32_t KarmaAllocator::get_fair_share() {
+    return get_free_blocks() / get_num_tenants();
 }
 
 uint32_t KarmaAllocator::get_allocation(uint32_t id) {

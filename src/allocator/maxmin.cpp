@@ -12,7 +12,6 @@ void MaxMinAllocator::add_tenant(uint32_t id) {
         throw std::invalid_argument("add_tenant(): tenant ID already exists");
     }
     tenants_[id] = Tenant();
-    fair_share_ = total_blocks_ / get_num_tenants();
 }
 
 void MaxMinAllocator::remove_tenant(uint32_t id) {
@@ -20,7 +19,6 @@ void MaxMinAllocator::remove_tenant(uint32_t id) {
         throw std::invalid_argument("remove_tenant(): tenant ID does not exist");
     }
     tenants_.erase(id);
-    fair_share_ = total_blocks_ / get_num_tenants();
 }
 
 void MaxMinAllocator::allocate() {
@@ -29,7 +27,7 @@ void MaxMinAllocator::allocate() {
         total_demand += t.demand_;
     }
 
-    if (total_blocks_ >= total_demand) {
+    if (total_demand < num_blocks_) {
         for (auto& [_, t] : tenants_) {
             t.allocation_ = t.demand_;
         }
@@ -39,7 +37,7 @@ void MaxMinAllocator::allocate() {
             h.push(id, t.demand_);
         }
 
-        uint64_t supply = total_blocks_;
+        uint64_t supply = num_blocks_;
         while (supply > 0) {
             if (supply < h.size()) {
                 for (uint32_t i = 0; i < supply; ++i) {
@@ -73,9 +71,13 @@ void MaxMinAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     }
 
     if (greedy) {
-        demand = std::max(fair_share_, demand);
+        demand = std::max(get_fair_share(), demand);
     }
     it->second.demand_ = demand;
+}
+
+uint32_t MaxMinAllocator::get_fair_share() {
+    return num_blocks_ / get_num_tenants();
 }
 
 uint32_t MaxMinAllocator::get_num_tenants() {
