@@ -13,20 +13,20 @@ int sample_rand_discrete(std::discrete_distribution<>& dist);
 
 matrix generate_uniform_demands(uint32_t N, uint32_t T, uint32_t max_demand);
 
-std::vector<float> welfares(matrix& demands, matrix& allocations);
+matrix read_demands(char* filename, uint32_t N, uint32_t T, bool shuffle);
 
-std::vector<float> welfares(matrix& demands, matrix& allocations,
-                            matrix& payments, fi valuation);
+std::vector<double> welfares(matrix& demands, matrix& allocations);
 
-float fairness(std::vector<float>& welfares, size_t si);
+std::vector<double> welfares(matrix& demands, matrix& allocations,
+                             matrix& payments, fi valuation);
 
-// float fairness(matrix& demands, matrix& allocations);
+double fairness(std::vector<double>& welfares, size_t si);
 
-float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations, size_t si);
+double instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations, size_t si);
 
-float instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations,
-                       std::vector<uint32_t>& payments, fi valuation, size_t si);
+double instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations,
+                        std::vector<uint32_t>& payments, fi valuation, size_t si);
 
-float utilization(std::vector<uint32_t>& demands, std::vector<uint32_t>& allocations, uint64_t blocks);
+double utilization(matrix& demands, matrix& allocations, uint64_t blocks);
 
-float range_average(std::vector<float>& arr, size_t a, size_t b);
+double range_average(std::vector<double>& arr, size_t a, size_t b);

@@ -6,7 +6,8 @@
 struct Bid {
     uint32_t qty_ = 0, price_ = 0;
 
-    Bid() {}
+    Bid() {
+    }
 
     Bid(uint32_t qty, uint32_t price) : qty_(qty), price_(price) {
         if (qty < 0 || price < 0) {
@@ -63,5 +64,5 @@ class MPSPAllocator : public Allocator {
 
     uint64_t get_free_blocks();
 
-    void charge_exclusion_payment(int id, std::vector<pi>& remaining_bids, uint32_t free_blocks, uint64_t welfare);
+    void charge_exclusion_payment(int id, std::vector<pi>& remaining_bids, uint64_t welfare);
 };

@@ -9,14 +9,14 @@ MaxMinAllocator::MaxMinAllocator(uint64_t num_blocks) : Allocator(num_blocks) {
 
 void MaxMinAllocator::add_tenant(uint32_t id) {
     if (tenants_.find(id) != tenants_.end()) {
-        throw std::invalid_argument("add_tenant(): tenant ID already exists");
+        throw std::out_of_range("add_tenant(): tenant ID already exists");
     }
     tenants_[id] = Tenant();
 }
 
 void MaxMinAllocator::remove_tenant(uint32_t id) {
     if (tenants_.find(id) != tenants_.end()) {
-        throw std::invalid_argument("remove_tenant(): tenant ID does not exist");
+        throw std::out_of_range("remove_tenant(): tenant ID does not exist");
     }
     tenants_.erase(id);
 }
@@ -67,7 +67,7 @@ void MaxMinAllocator::allocate() {
 void MaxMinAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     auto it = tenants_.find(id);
     if (it == tenants_.end()) {
-        throw std::invalid_argument("set_demand(): tenant ID does not exist");
+        throw std::out_of_range("set_demand(): tenant ID does not exist");
     }
 
     if (greedy) {
@@ -87,7 +87,7 @@ uint32_t MaxMinAllocator::get_num_tenants() {
 uint32_t MaxMinAllocator::get_allocation(uint32_t id) {
     auto it = tenants_.find(id);
     if (it == tenants_.end()) {
-        throw std::invalid_argument("get_allocation(): tenant ID does not exist");
+        throw std::out_of_range("get_allocation(): tenant ID does not exist");
     }
     return it->second.allocation_;
 }

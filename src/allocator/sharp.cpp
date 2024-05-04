@@ -88,32 +88,32 @@ void SharpAllocator::delegate_claims() {
 void SharpAllocator::redeem_claims() {
     uint64_t total_demand = 0;
     for (auto& [_, t] : tenants_) {
-        total_demand += t.demand_;
+        total_demand += std::min(t.demand_, t.num_tickets_);
     }
 
-    if (total_demand < num_blocks_) {
+    if (total_demand <= num_blocks_) {
         for (auto& [_, t] : tenants_) {
             t.allocation_ = std::min(t.demand_, t.num_tickets_);
         }
     } else {
-        std::vector<uint32_t> tenant_tickets(get_num_tenants(), 0);
+        std::vector<uint32_t> weights(get_num_tenants(), 0);
         // Assume tenant IDs are in [1, N]
         for (auto& [id, t] : tenants_) {
             t.allocation_ = 0;
             if (t.demand_ > 0) {
-                tenant_tickets[id - 1] = t.num_tickets_;
+                weights[id - 1] = t.num_tickets_;
             }
         }
-        auto dist = get_rand_discrete(tenant_tickets);
+        auto dist = get_rand_discrete(weights);
 
         for (uint32_t i = 0; i < num_blocks_; ++i) {
             uint32_t id = sample_rand_discrete(dist) + 1;
             auto& t = tenants_[id];
 
-            assert(t.allocation_ < t.demand_);
+            assert(t.allocation_ < t.demand_ && t.allocation_ < t.num_tickets_);
             if (++t.allocation_ == std::min(t.demand_, t.num_tickets_)) {
-                tenant_tickets[id - 1] = 0;
-                dist = get_rand_discrete(tenant_tickets);
+                weights[id - 1] = 0;
+                dist = get_rand_discrete(weights);
             }
         }
     }

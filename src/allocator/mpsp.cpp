@@ -6,14 +6,12 @@
 
 #include "utils.h"
 
-struct q_cmp {
-    bool operator()(const pi& a, const pi& b) {
-        if (a.second == b.second) {
-            return rand_bool();
-        }
-        return a.second < b.second;
-    }
-};
+bool bid_cmp(const pi& a, const pi& b) {
+    // if (a.second == b.second && a.first != b.first) {
+    //     return rand_bool();
+    // }
+    return a.second < b.second;
+}
 
 void MPSPAllocator::Tenant::bid_auction(uint32_t demand, uint32_t fair_share,
                                         bool greedy, pi border_bids) {
@@ -22,6 +20,7 @@ void MPSPAllocator::Tenant::bid_auction(uint32_t demand, uint32_t fair_share,
     } else {
         uint32_t qty = demand - fair_share;
         uint32_t val = valuation_(qty);
+        assert(val > 0);
 
         if (greedy) {
             uint32_t del = val / 10;
@@ -39,19 +38,19 @@ MPSPAllocator::MPSPAllocator(uint64_t num_blocks, uint64_t base_blocks, fi valua
     border_bids_.first = valuation(1);
     border_bids_.second = border_bids_.first;
 
-    tenants_[PUBLIC_ID].bid_ = Bid(get_free_blocks(), border_bids_.first / 2);
+    tenants_[PUBLIC_ID].bid_ = Bid(get_free_blocks() + 1, border_bids_.first / 2);
 }
 
 void MPSPAllocator::add_tenant(uint32_t id) {
     if (id == PUBLIC_ID || tenants_.find(id) != tenants_.end()) {
-        throw std::invalid_argument("add_tenant(): tenant ID already exists");
+        throw std::out_of_range("add_tenant(): tenant ID already exists");
     }
     tenants_.emplace(id, valuation_);
 }
 
 void MPSPAllocator::remove_tenant(uint32_t id) {
     if (id == PUBLIC_ID || tenants_.find(id) == tenants_.end()) {
-        throw std::invalid_argument("remove_tenant(): tenant ID does not exist");
+        throw std::out_of_range("remove_tenant(): tenant ID does not exist");
     }
     tenants_.erase(id);
 }
@@ -59,27 +58,33 @@ void MPSPAllocator::remove_tenant(uint32_t id) {
 void MPSPAllocator::allocate() {
     uint32_t fair_share = get_fair_share();
     uint32_t free_blocks = get_free_blocks();
-    std::priority_queue<pi, std::vector<pi>, q_cmp> highest_bids;
+    std::vector<pi> lowest_bids;
 
     for (auto& [id, t] : tenants_) {
         t.payment_ = 0;
         if (id != PUBLIC_ID) {
             t.allocation_ = fair_share;
         } else {
-            t.bid_.qty_ = free_blocks;
+            t.bid_.qty_ = free_blocks + 1;
         }
 
         if (t.bid_.qty_ > 0) {
-            highest_bids.emplace(id, t.bid_.price_);
+            lowest_bids.emplace_back(id, t.bid_.price_);
         }
     }
 
+    std::sort(lowest_bids.begin(), lowest_bids.end(), bid_cmp);
+
     uint64_t welfare = 0;
+    // std::vector<uint32_t> winners;
     while (free_blocks > 0) {
-        auto [id, price] = highest_bids.top();
+        auto [id, price] = lowest_bids.back();
         auto& t = tenants_[id];
+        assert(t.payment_ == 0);
 
         uint32_t blocks = std::min(t.bid_.qty_, free_blocks);
+        assert(blocks > 0);
+
         t.bid_.qty_ -= blocks;
         t.allocation_ = blocks;
         t.payment_ = price;
@@ -89,38 +94,31 @@ void MPSPAllocator::allocate() {
         border_bids_.first = price;
 
         if (t.bid_.qty_ == 0) {
-            highest_bids.pop();
+            lowest_bids.pop_back();
         }
+        // winners.push_back(id);
     }
 
-    assert(!highest_bids.empty());
-    border_bids_.second = highest_bids.top().second;
+    assert(!lowest_bids.empty());
+    border_bids_.second = lowest_bids.back().second;
     assert(border_bids_.first >= border_bids_.second);
-
-    std::vector<pi> remaining_bids;
-    while (!highest_bids.empty()) {
-        remaining_bids.push_back(highest_bids.top());
-        highest_bids.pop();
-    }
 
     for (auto& [id, t] : tenants_) {
         if (id != PUBLIC_ID) {
-            charge_exclusion_payment(id, remaining_bids, free_blocks, welfare);
+            charge_exclusion_payment(id, lowest_bids, welfare);
         }
     }
 }
 
-void MPSPAllocator::charge_exclusion_payment(int id, std::vector<pi>& remaining_bids, uint32_t free_blocks, uint64_t welfare) {
-    assert(free_blocks == 0);
-
+void MPSPAllocator::charge_exclusion_payment(int id, std::vector<pi>& remaining_bids, uint64_t welfare) {
     auto& t = tenants_[id];
     if (t.payment_ > 0) {
-        free_blocks += t.allocation_;
+        uint32_t free_blocks = t.allocation_;
 
         uint64_t exclude_welfare = welfare - t.payment_ * t.allocation_;
         welfare = exclude_welfare;
 
-        for (size_t i = 0; i < remaining_bids.size() && free_blocks > 0; ++i) {
+        for (int i = remaining_bids.size() - 1; i >= 0 && free_blocks > 0; --i) {
             auto [bidder_id, price] = remaining_bids[i];
 
             if (id != bidder_id) {
@@ -139,7 +137,7 @@ void MPSPAllocator::charge_exclusion_payment(int id, std::vector<pi>& remaining_
 void MPSPAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     auto it = tenants_.find(id);
     if (id == PUBLIC_ID || it == tenants_.end()) {
-        throw std::invalid_argument("set_demand(): tenant ID does not exist");
+        throw std::out_of_range("set_demand(): tenant ID does not exist");
     }
     it->second.bid_auction(demand, get_fair_share(), greedy, border_bids_);
 }
@@ -151,7 +149,7 @@ uint32_t MPSPAllocator::get_num_tenants() {
 uint32_t MPSPAllocator::get_allocation(uint32_t id) {
     auto it = tenants_.find(id);
     if (it == tenants_.end()) {
-        throw std::invalid_argument("get_allocation(): tenant ID does not exist");
+        throw std::out_of_range("get_allocation(): tenant ID does not exist");
     }
     return it->second.allocation_;
 }
@@ -159,7 +157,7 @@ uint32_t MPSPAllocator::get_allocation(uint32_t id) {
 uint32_t MPSPAllocator::get_payment(uint32_t id) {
     auto it = tenants_.find(id);
     if (it == tenants_.end()) {
-        throw std::invalid_argument("get_payment(): tenant ID does not exist");
+        throw std::out_of_range("get_payment(): tenant ID does not exist");
     }
     return it->second.payment_;
 }
