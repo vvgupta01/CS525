@@ -30,3 +30,5 @@ double instant_fairness(std::vector<uint32_t>& demands, std::vector<uint32_t>& a
 double utilization(matrix& demands, matrix& allocations, uint64_t blocks);
 
 double range_average(std::vector<double>& arr, size_t a, size_t b);
+
+void clamp(double* a, double* b);

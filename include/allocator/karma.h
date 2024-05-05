@@ -28,6 +28,8 @@ class KarmaAllocator : public Allocator {
 
     uint32_t get_allocation(uint32_t id);
 
+    uint32_t get_credits(uint32_t id);
+
    private:
     struct Tenant {
         uint32_t demand_ = 0, allocation_ = 0, credits_;

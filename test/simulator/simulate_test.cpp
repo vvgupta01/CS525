@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     if (argc == 4) {
         demands = generate_uniform_demands(N, T, fair_share * 2);
     } else {
-        demands = read_demands(argv[4], N, T, true);
+        demands = read_demands(argv[4], N, T, false);
     }
     assert(demands.size() == T && demands[0].size() == N);
 
@@ -47,8 +47,8 @@ int main(int argc, char** argv) {
         KarmaAllocator karma(B, 1, B * T);
         MPSPAllocator mpsp(B, 0, valuation);
         SharpAllocator sharp(B, 2, 2);
-
         Simulation s(N, T, sigma);
+
         s.simulate(static_alloc, demands);
         output_sim(s, sim_out, "static");
 

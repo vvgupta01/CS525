@@ -30,7 +30,9 @@ class SharpAllocator : public Allocator {
 
     uint32_t get_allocation(uint32_t id);
 
-    uint64_t get_tickets();
+    uint32_t get_tickets(uint32_t id);
+
+    uint64_t get_available_tickets();
 
    private:
     struct Tenant {

@@ -7,9 +7,6 @@
 #include "utils.h"
 
 bool bid_cmp(const pi& a, const pi& b) {
-    // if (a.second == b.second && a.first != b.first) {
-    //     return rand_bool();
-    // }
     return a.second < b.second;
 }
 
@@ -23,8 +20,8 @@ void MPSPAllocator::Tenant::bid_auction(uint32_t demand, uint32_t fair_share,
         assert(val > 0);
 
         if (greedy) {
-            uint32_t del = val / 10;
-            val += rand_uniform(-del, del);
+            uint32_t delta = 10;
+            val += rand_uniform(-delta, delta);
         }
         bid_ = Bid(qty, val);
     }

@@ -67,8 +67,10 @@ std::vector<double> welfares(matrix& demands, matrix& allocations) {
     for (uint32_t i = 0; i < N; ++i) {
         uint64_t used = 0, total_demand = 0;
         for (uint32_t t = 0; t < demands.size(); ++t) {
-            used += std::min(demands[t][i], allocations[t][i]);
-            total_demand += demands[t][i];
+            if (demands[t][i] > 0) {
+                used += std::min(demands[t][i], allocations[t][i]);
+                total_demand += demands[t][i];
+            }
         }
         welfares[i] = total_demand > 0 ? (double)used / total_demand : 1;
     }
@@ -83,9 +85,11 @@ std::vector<double> welfares(matrix& demands, matrix& allocations,
     for (uint32_t i = 0; i < N; ++i) {
         double actual = 0, expected = 0;
         for (uint32_t t = 0; t < demands.size(); ++t) {
-            double w = (double)std::min(demands[t][t], allocations[t][i]) * valuation(demands[t][i]) / payments[t][i];
-            actual += std::min((double)demands[t][i], w);
-            expected += demands[t][i];
+            if (demands[t][i] > 0) {
+                double w = (double)std::min(demands[t][t], allocations[t][i]) * valuation(demands[t][i]) / payments[t][i];
+                actual += std::min((double)demands[t][i], w);
+                expected += demands[t][i];
+            }
         }
         welfares[i] = expected > 0 ? actual / expected : 1;
     }
@@ -148,4 +152,12 @@ double range_average(std::vector<double>& arr, size_t a, size_t b) {
         sum += arr[i];
     }
     return b > a ? sum / (b - a) : 0;
+}
+
+void clamp(double* a, double* b) {
+    if (*a == 0) {
+        *a = *b;
+    } else if (*b == 0) {
+        *b = *a;
+    }
 }

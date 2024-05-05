@@ -244,3 +244,11 @@ uint32_t KarmaAllocator::get_allocation(uint32_t id) {
     }
     return it->second.allocation_;
 }
+
+uint32_t KarmaAllocator::get_credits(uint32_t id) {
+    auto it = tenants_.find(id);
+    if (it == tenants_.end()) {
+        throw std::out_of_range("get_allocation(): tenant ID does not exist");
+    }
+    return it->second.credits_;
+}

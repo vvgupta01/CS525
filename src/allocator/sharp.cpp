@@ -40,7 +40,7 @@ SharpAllocator::SharpAllocator(uint64_t num_blocks, float OD, uint32_t claim_ter
 
 void SharpAllocator::add_tenant(uint32_t id) {
     if (id == PUBLIC_ID || tenants_.find(id) != tenants_.end()) {
-        throw std::invalid_argument("add_tenant(): tenant ID already exists");
+        throw std::out_of_range("add_tenant(): tenant ID already exists");
     }
     tenants_[id] = Tenant();
     claim_alloc_.add_tenant(id);
@@ -48,7 +48,7 @@ void SharpAllocator::add_tenant(uint32_t id) {
 
 void SharpAllocator::remove_tenant(uint32_t id) {
     if (id == PUBLIC_ID || tenants_.find(id) == tenants_.end()) {
-        throw std::invalid_argument("remove_tenant(): tenant ID does not exist");
+        throw std::out_of_range("remove_tenant(): tenant ID does not exist");
     }
     tenants_.erase(id);
     claim_alloc_.remove_tenant(id);
@@ -63,7 +63,7 @@ void SharpAllocator::allocate() {
 void SharpAllocator::set_demand(uint32_t id, uint32_t demand, bool greedy) {
     auto it = tenants_.find(id);
     if (id == PUBLIC_ID || it == tenants_.end()) {
-        throw std::invalid_argument("set_demand(): tenant ID does not exist");
+        throw std::out_of_range("set_demand(): tenant ID does not exist");
     }
 
     if (greedy) {
@@ -86,12 +86,12 @@ void SharpAllocator::delegate_claims() {
 }
 
 void SharpAllocator::redeem_claims() {
-    uint64_t total_demand = 0;
+    uint64_t total_redeeem = 0;
     for (auto& [_, t] : tenants_) {
-        total_demand += std::min(t.demand_, t.num_tickets_);
+        total_redeeem += std::min(t.demand_, t.num_tickets_);
     }
 
-    if (total_demand <= num_blocks_) {
+    if (total_redeeem <= num_blocks_) {
         for (auto& [_, t] : tenants_) {
             t.allocation_ = std::min(t.demand_, t.num_tickets_);
         }
@@ -128,7 +128,7 @@ void SharpAllocator::expire_claims() {
 }
 
 uint32_t SharpAllocator::get_fair_share() {
-    return get_tickets() / get_num_tenants();
+    return get_available_tickets() / get_num_tenants();
 }
 
 uint32_t SharpAllocator::get_num_tenants() {
@@ -138,11 +138,19 @@ uint32_t SharpAllocator::get_num_tenants() {
 uint32_t SharpAllocator::get_allocation(uint32_t id) {
     auto it = tenants_.find(id);
     if (it == tenants_.end()) {
-        throw std::invalid_argument("get_allocation(): tenant ID does not exist");
+        throw std::out_of_range("get_allocation(): tenant ID does not exist");
     }
     return it->second.allocation_;
 }
 
-uint64_t SharpAllocator::get_tickets() {
+uint32_t SharpAllocator::get_tickets(uint32_t id) {
+    auto it = tenants_.find(id);
+    if (it == tenants_.end()) {
+        throw std::out_of_range("get_allocation(): tenant ID does not exist");
+    }
+    return it->second.num_tickets_;
+}
+
+uint64_t SharpAllocator::get_available_tickets() {
     return claim_alloc_.get_num_blocks();
 }
